@@ -83,6 +83,15 @@ main { display: grid; gap: 20px; min-width: 0; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
 .panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
 .panel .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.row3 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 1060px) { .row3 { grid-template-columns: minmax(0, 1fr); } }
+.phead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
+.phead .seg { min-width: 0; }
+.phead .seg button { padding: 4px 10px; font-size: 12px; }
+.ctrls { display: flex; flex-wrap: wrap; gap: 8px; }
+.canvas-box { position: relative; width: 100%; aspect-ratio: 4 / 3; max-width: 100%; }
+.canvas-box canvas { width: 100%; height: 100%; display: block; }
+.mini { margin-top: 10px; }
 .stackcol { display: grid; gap: 20px; align-content: start; min-width: 0; }
 .row2 { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 1060px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
@@ -237,7 +246,7 @@ const fmt = (n) => n.toLocaleString("ko-KR");
 const pct = (a, b) => (b ? (100 * a / b) : 0);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-let D, N, P, B, T, V, X, Z, S, DT, R, MONTH, pitchCount;
+let D, N, P, B, T, V, X, Z, S, DT, R, MX, MZ, MONTH, pitchCount;
 let colors = [];
 const state = { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all", hidden: new Set() };
 let sel = new Uint32Array(0);
@@ -255,6 +264,7 @@ function decode(data) {
   X = Int16Array.from(c.x, (v) => v ?? -32768); Z = Int16Array.from(c.z, (v) => v ?? -32768);
   S = Uint16Array.from(c.s); DT = Uint16Array.from(c.d);
   R = Int16Array.from(c.r, (v) => v ?? -1);  // 타석 결과*2 + 결정구, 없으면 -1
+  MX = Int16Array.from(c.mx, (v) => v ?? -32768); MZ = Int16Array.from(c.mz, (v) => v ?? -32768);
   const months = [...new Set(data.dates.map((d) => d.slice(0, 7)))];
   const monthIdx = data.dates.map((d) => months.indexOf(d.slice(0, 7)));
   MONTH = { list: months, of: Uint8Array.from(DT, (d) => monthIdx[d]) };
@@ -409,6 +419,32 @@ function shell() {
       </section>
       </div>
     </div>
+    <div class="row3">
+      <section class="panel" aria-labelledby="h-traj">
+        <div class="phead">
+          <div><h2 id="h-traj">투구 궤적</h2>
+          <p class="sub" id="traj-sub">측정 시작(홈에서 50ft)부터 홈플레이트까지. 그 앞쪽 릴리스 구간은 같은 식으로 이어 그린 추정입니다.</p></div>
+          <div class="ctrls">
+            <div class="seg" id="traj-view" role="group" aria-label="시점">
+              <button type="button" data-v="catcher" aria-pressed="true">포수 시점</button>
+              <button type="button" data-v="side" aria-pressed="false">옆</button>
+              <button type="button" data-v="top" aria-pressed="false">위</button>
+            </div>
+            <div class="seg" id="traj-mode" role="group" aria-label="표시 방식">
+              <button type="button" data-v="avg" aria-pressed="true">구종 평균</button>
+              <button type="button" data-v="each" aria-pressed="false">개별 투구</button>
+            </div>
+          </div>
+        </div>
+        <div class="canvas-box" id="trajbox"><canvas id="traj" role="img" aria-label="구종별 투구 궤적"></canvas></div>
+      </section>
+      <section class="panel" aria-labelledby="h-move">
+        <h2 id="h-move">무브먼트</h2>
+        <p class="sub">홈에서 40ft 지점부터, 회전이 없을 때(중력만 받을 때)보다 공이 더 움직인 거리. 포수 시점, 단위 cm. 구장 장비 차이로 ±5cm 정도 오차가 있습니다.</p>
+        <div class="canvas-box" id="movebox"><canvas id="move" role="img" aria-label="구종별 무브먼트 분포"></canvas></div>
+        <div class="tablewrap mini"><table id="movetable"></table></div>
+      </section>
+    </div>
     <section class="panel" aria-labelledby="h-count">
       <h2 id="h-count">카운트별 볼배합</h2>
       <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
@@ -416,11 +452,13 @@ function shell() {
     </section>
     <p class="note">좌우 위치와 높이 단위는 ft(30.48cm). 투구 추적값이 없는 공은 위치 그림에서만 빠집니다. 카운트 필터를 걸면 카운트별 볼배합은 해당 카운트만 표시됩니다.</p>`;
   setupZone();
+  setupTrajMove();
 }
 
 function renderStatline(agg) {
   const pit = state.pitcher === "all" ? null : D.pitchers[+state.pitcher];
-  const who = pit ? `${esc(pit[0])}<span>${esc(D.teams[pit[1]])}</span>`
+  const hand = pit && pit[2] ? ` · ${pit[2] === "L" ? "좌투" : "우투"}` : "";
+  const who = pit ? `${esc(pit[0])}<span>${esc(D.teams[pit[1]])}${hand}</span>`
     : state.team === "all" ? "리그 전체" : `${esc(D.teams[+state.team])}<span>팀 투수 전체</span>`;
   const ffIdx = D.types.indexOf("직구");
   const ff = ffIdx >= 0 ? agg.by[ffIdx] : null;
@@ -518,7 +556,7 @@ function setupZone() {
     const t = +c.dataset.t;
     state.hidden.has(t) ? state.hidden.delete(t) : state.hidden.add(t);
     c.setAttribute("aria-pressed", String(!state.hidden.has(t)));
-    drawZone();
+    drawZone(); drawTraj(); drawMove();
   });
 }
 const sx = (x) => (x - XR[0]) / (XR[1] - XR[0]) * zoneW;
@@ -604,10 +642,243 @@ document.addEventListener("mouseover", (e) => {
   seg.addEventListener("mouseleave", () => { seg.removeEventListener("mousemove", move); hideTip(); }, { once: true });
 });
 
+/* ---------- 투구 궤적 ---------- */
+// 궤적 파라미터 [x0, z0, vx0, vy0, vz0, ax, ay, az], y0 = 50ft. 위치 = r0 + v0 t + a t^2 / 2
+const TK = ["x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az"];
+const Y0 = 50, Y_PLATE = 17 / 12, Y_RELEASE = 54.5, Y_RUBBER = 60.5;
+let TR = null;  // Float32Array(N * 8), 아직 안 불러온 투구는 NaN
+const trajLoaded = new Map();
+let trajView = "catcher", trajMode = "avg", trajStatus = "";
+let trajCtx, trajW = 0, trajH = 0, moveCtx, moveW = 0, moveH = 0, moveMeans = [];
+
+function setupCanvas(boxId, canvasId, onSize) {
+  const box = $(boxId), cv = $(canvasId), ctx = cv.getContext("2d");
+  new ResizeObserver(() => {
+    const r = box.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    onSize(ctx, r.width, r.height);
+  }).observe(box);
+}
+function setupTrajMove() {
+  setupCanvas("trajbox", "traj", (ctx, w, h) => { trajCtx = ctx; trajW = w; trajH = h; drawTraj(); });
+  setupCanvas("movebox", "move", (ctx, w, h) => { moveCtx = ctx; moveW = w; moveH = h; drawMove(); });
+  for (const [id, set] of [["traj-view", (v) => trajView = v], ["traj-mode", (v) => trajMode = v]]) {
+    $(id).addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      set(b.dataset.v);
+      for (const x of $(id).querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+      drawTraj();
+    });
+  }
+  $("move").addEventListener("mousemove", moveHover);
+  $("move").addEventListener("mouseleave", hideTip);
+}
+
+function trajTeam() {
+  if (state.pitcher !== "all") return D.pitchers[+state.pitcher][1];
+  return state.team === "all" ? -1 : +state.team;
+}
+function ensureTraj(team) {
+  if (!trajLoaded.has(team)) {
+    const pr = fetch(`traj/${team}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((t) => {
+      if (!TR) TR = new Float32Array(N * 8).fill(NaN);
+      t.i.forEach((gi, k) => { for (let j = 0; j < 8; j++) TR[gi * 8 + j] = t[TK[j]][k] / 100; });
+    });
+    pr.catch(() => trajLoaded.delete(team));
+    trajLoaded.set(team, pr);
+  }
+  return trajLoaded.get(team);
+}
+function refreshTraj() {
+  const team = trajTeam();
+  if (team < 0) { trajStatus = "팀이나 투수를 고르면 궤적을 그립니다."; return drawTraj(); }
+  trajStatus = "궤적 데이터를 불러오는 중…"; drawTraj();
+  ensureTraj(team).then(() => { trajStatus = ""; drawTraj(); }, () => { trajStatus = "궤적 데이터를 불러오지 못했습니다."; drawTraj(); });
+}
+
+function tAtY(p, y) {
+  const a = p[6] / 2, b = p[3], c = Y0 - y, disc = b * b - 4 * a * c;
+  if (disc < 0 || a === 0) return null;
+  return (-b - Math.sqrt(disc)) / (2 * a);
+}
+function pathOf(p, steps) {
+  const t0 = tAtY(p, Y_RELEASE), t1 = tAtY(p, Y_PLATE);
+  if (t0 == null || t1 == null) return null;
+  const pts = [];
+  for (let k = 0; k <= steps; k++) {
+    const t = t0 + (t1 - t0) * k / steps;
+    pts.push([p[0] + p[2] * t + p[5] * t * t / 2, Y0 + p[3] * t + p[6] * t * t / 2, p[1] + p[4] * t + p[7] * t * t / 2]);
+  }
+  return pts;
+}
+function projector(view, w, h) {
+  const pad = 30;
+  if (view === "catcher") {
+    // 홈플레이트 뒤 20ft, 릴리스와 비슷한 높이(4.6ft)에 카메라를 둔 원근 투영 (Statcast 포수 시점과 비슷한 구도)
+    const camY = -20, camZ = 4.6, d0 = Y_PLATE - camY, f = Math.min(w * 0.5 * d0 / 2.8, h * 4.2);
+    return ([x, y, z]) => { const d = y - camY; return [w / 2 + f * x / d, h * 0.22 - f * (z - camZ) / d]; };
+  }
+  const sx = (y) => pad + (Y_RUBBER + 1 - y) / (Y_RUBBER + 1) * (w - pad * 2);
+  if (view === "side") return ([x, y, z]) => [sx(y), h - pad - z / 8 * (h - pad * 2)];
+  return ([x, y, z]) => [sx(y), h / 2 - x / 3 * (h / 2 - pad)];  // 위에서 본 모습: 위쪽이 1루
+}
+function trajParams(i, out) {
+  const o = i * 8;
+  if (!TR || Number.isNaN(TR[o])) return false;
+  for (let j = 0; j < 8; j++) out[j] = TR[o + j];
+  return true;
+}
+
+function drawTraj() {
+  if (!trajCtx || !trajW) return;
+  const ctx = trajCtx, w = trajW, h = trajH, cs = getComputedStyle(document.documentElement);
+  const tok = (n) => cs.getPropertyValue(n).trim();
+  const line = tok("--line"), muted = tok("--muted"), ink = tok("--zone"), surface = tok("--surface");
+  const font = getComputedStyle(document.body).fontFamily;
+  ctx.clearRect(0, 0, w, h);
+  const pr = projector(trajView, w, h);
+  const poly = (pts, close) => { ctx.beginPath(); pts.forEach((q, k) => { const [a, b] = pr(q); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); if (close) ctx.closePath(); };
+  const [zb, zt] = D.meta.zone, hw = 17 / 24;
+  ctx.font = "11px " + font; ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.lineWidth = 1;
+
+  // 배경: 홈플레이트, 스트라이크존, 투수판
+  if (trajView === "catcher") {
+    ctx.fillStyle = line;
+    poly([[-hw, Y_PLATE, 0], [hw, Y_PLATE, 0], [hw, hw, 0], [0, 0, 0], [-hw, hw, 0]], true); ctx.fill();
+    poly([[-1, Y_RUBBER, 0.83], [1, Y_RUBBER, 0.83]]); ctx.lineWidth = 3; ctx.strokeStyle = line; ctx.stroke();
+  } else if (trajView === "side") {
+    ctx.beginPath(); const [g0, gy] = pr([0, Y_RUBBER + 1, 0]), [g1] = pr([0, 0, 0]); ctx.moveTo(g0, gy); ctx.lineTo(g1, gy); ctx.stroke();
+    // 마운드: 투수판 높이 10인치, 앞쪽으로 완만하게 내려감
+    ctx.fillStyle = line; poly([[0, Y_RUBBER + 1, 0], [0, Y_RUBBER + 1, 0.83], [0, Y_RUBBER - 0.5, 0.83], [0, Y_RUBBER - 6.5, 0.33], [0, Y_RUBBER - 9, 0]], true); ctx.fill();
+    ctx.fillStyle = muted; ctx.textAlign = "center";
+    for (let ft = 0; ft <= 60; ft += 10) { const [a] = pr([0, ft, 0]); ctx.fillText(`${ft}ft`, a, gy + 16); }
+  } else {
+    ctx.beginPath(); const [a0, my] = pr([0, Y_RUBBER + 1, 0]), [a1] = pr([0, 0, 0]); ctx.setLineDash([4, 4]); ctx.moveTo(a0, my); ctx.lineTo(a1, my); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = line; poly([[-hw, Y_PLATE, 0], [hw, Y_PLATE, 0], [hw, hw, 0], [0, 0, 0], [-hw, hw, 0]], true); ctx.fill();
+    poly([[-1, Y_RUBBER, 0], [1, Y_RUBBER, 0]]); ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = muted; ctx.textAlign = "left"; ctx.fillText("1루 쪽", 8, 16); ctx.fillText("3루 쪽", 8, h - 8);
+  }
+
+  if (trajStatus) {
+    ctx.fillStyle = muted; ctx.textAlign = "center"; ctx.font = "13px " + font;
+    ctx.fillText(trajStatus, w / 2, h / 2);
+    return;
+  }
+
+  // 데이터: 구종별 평균 궤적 또는 개별 투구
+  const p = new Float32Array(8), nt = D.types.length;
+  const sums = Array.from({ length: nt }, () => new Float64Array(9));
+  const each = [];
+  for (const i of sel) {
+    const t = T[i];
+    if (state.hidden.has(t) || !trajParams(i, p)) continue;
+    const s = sums[t]; for (let j = 0; j < 8; j++) s[j] += p[j]; s[8]++;
+    each.push(i);
+  }
+  const shown = each.length, stride = Math.max(1, Math.ceil(shown / 300));
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (trajMode === "each") {
+    ctx.lineWidth = 1; ctx.globalAlpha = shown > 100 ? 0.35 : 0.6;
+    for (let k = 0; k < shown; k += stride) {
+      const i = each[k]; trajParams(i, p);
+      const pts = pathOf(p, 16); if (!pts) continue;
+      ctx.strokeStyle = colors[T[i]]; poly(pts); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    const order = sums.map((s, t) => ({ t, n: s[8] })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    for (const { t, n } of order) {
+      const m = Array.from(sums[t].slice(0, 8), (v) => v / n);
+      const pts = pathOf(m, 32); if (!pts) continue;
+      // 측정 시작(50ft) 이전 추정 구간은 점선
+      const cut = pts.findIndex((q) => q[1] <= Y0);
+      ctx.strokeStyle = colors[t]; ctx.lineWidth = 3;
+      ctx.setLineDash([3, 4]); poly(pts.slice(0, cut + 1)); ctx.stroke(); ctx.setLineDash([]);
+      poly(pts.slice(cut)); ctx.stroke();
+      const [ex, ey] = pr(pts[pts.length - 1]);
+      ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fillStyle = colors[t]; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    }
+  }
+
+  // 스트라이크존은 궤적 위에
+  ctx.strokeStyle = ink; ctx.lineWidth = 1.5;
+  if (trajView === "catcher") { poly([[-hw, Y_PLATE, zb], [hw, Y_PLATE, zb], [hw, Y_PLATE, zt], [-hw, Y_PLATE, zt]], true); ctx.stroke(); }
+  else if (trajView === "side") { poly([[0, Y_PLATE, zb], [0, Y_PLATE, zt]]); ctx.lineWidth = 3; ctx.stroke(); }
+  else { poly([[-hw, Y_PLATE, 0], [hw, Y_PLATE, 0]]); ctx.lineWidth = 3; ctx.stroke(); }
+  ctx.fillStyle = muted; ctx.font = "11px " + font; ctx.textAlign = "right";
+  const label = trajMode === "each" ? `${fmt(Math.ceil(shown / stride))}구 표시` : `${fmt(shown)}구 평균`;
+  ctx.fillText(label, w - 8, 16);
+  if (trajView === "side") { ctx.textAlign = "left"; ctx.fillText("투수판", 6, 16); }
+}
+
+/* ---------- 무브먼트 ---------- */
+const MXR = [-70, 70], MZR = [-60, 70], MOVE_PAD = 34;
+function drawMove() {
+  if (!moveCtx || !moveW) return;
+  const ctx = moveCtx, w = moveW, h = moveH, cs = getComputedStyle(document.documentElement);
+  const tok = (n) => cs.getPropertyValue(n).trim();
+  const line = tok("--line"), muted = tok("--muted"), surface = tok("--surface"), ink = tok("--ink");
+  const font = getComputedStyle(document.body).fontFamily;
+  const pad = MOVE_PAD;
+  const mx = (v) => pad + (v - MXR[0]) / (MXR[1] - MXR[0]) * (w - pad * 2);
+  const mz = (v) => h - pad - (v - MZR[0]) / (MZR[1] - MZR[0]) * (h - pad * 2);
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = "11px " + font; ctx.lineWidth = 1; ctx.strokeStyle = line; ctx.fillStyle = muted;
+  // 20cm 격자
+  ctx.textAlign = "center";
+  for (let v = -60; v <= 60; v += 20) { ctx.globalAlpha = v ? 0.5 : 1; ctx.beginPath(); ctx.moveTo(mx(v), mz(MZR[0])); ctx.lineTo(mx(v), mz(MZR[1])); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(v, mx(v), h - pad + 14); }
+  ctx.textAlign = "right";
+  for (let v = -60; v <= 60; v += 20) { ctx.globalAlpha = v ? 0.5 : 1; ctx.beginPath(); ctx.moveTo(mx(MXR[0]), mz(v)); ctx.lineTo(mx(MXR[1]), mz(v)); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(v, pad - 4, mz(v) + 4); }
+  // 방향 안내: 투수가 정해지면 팔 쪽/글러브 쪽
+  const pit = state.pitcher === "all" ? null : D.pitchers[+state.pitcher];
+  const left = pit && pit[2] ? (pit[2] === "R" ? "← 팔 쪽 (3루)" : "← 글러브 쪽 (3루)") : "← 3루 쪽";
+  const right = pit && pit[2] ? (pit[2] === "R" ? "글러브 쪽 (1루) →" : "팔 쪽 (1루) →") : "1루 쪽 →";
+  ctx.textAlign = "left"; ctx.fillText(left, pad + 4, pad - 10);
+  ctx.textAlign = "right"; ctx.fillText(right, w - pad - 4, pad - 10);
+  ctx.textAlign = "left";
+  ctx.fillText("↑ 덜 떨어짐", mx(MXR[0]) + 6, mz(MZR[1]) + 14);
+  ctx.fillText("↓ 더 떨어짐", mx(MXR[0]) + 6, mz(MZR[0]) - 6);
+
+  const nt = D.types.length, sums = Array.from({ length: nt }, () => [0, 0, 0, 0, 0]);
+  const pts = [];
+  for (const i of sel) {
+    if (MX[i] === -32768 || state.hidden.has(T[i])) continue;
+    pts.push(i);
+    const s = sums[T[i]]; s[0] += MX[i]; s[1] += MZ[i]; s[2]++; if (V[i]) { s[3] += V[i]; s[4]++; }
+  }
+  const r = pts.length > 20000 ? 1.4 : pts.length > 3000 ? 2 : 3;
+  ctx.globalAlpha = pts.length > 20000 ? 0.12 : pts.length > 3000 ? 0.3 : 0.55;
+  for (const i of pts) { ctx.beginPath(); ctx.arc(mx(MX[i]), mz(MZ[i]), r, 0, Math.PI * 2); ctx.fillStyle = colors[T[i]]; ctx.fill(); }
+  ctx.globalAlpha = 1;
+  moveMeans = sums.map((s, t) => ({ t, n: s[2], h: s[0] / s[2], v: s[1] / s[2], kmh: s[4] ? s[3] / s[4] : 0 })).filter((m) => m.n > 0).sort((a, b) => b.n - a.n);
+  for (const m of moveMeans) {
+    const x = mx(m.h), y = mz(m.v);
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fillStyle = colors[m.t]; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    ctx.fillStyle = ink; ctx.textAlign = "left"; ctx.font = "600 12px " + font;
+    ctx.fillText(D.types[m.t], x + 10, y + 4); ctx.font = "11px " + font;
+  }
+  $("movetable").innerHTML = `<thead><tr><th>구종</th><th>투구 수</th><th>평균 구속</th><th>수평 cm</th><th>수직 cm</th></tr></thead><tbody>` +
+    (moveMeans.length ? moveMeans.map((m) => `<tr><td><span class="tname"><i style="background:${colors[m.t]}"></i>${esc(D.types[m.t])}</span></td><td>${fmt(m.n)}</td><td>${m.kmh ? m.kmh.toFixed(1) : "–"}</td><td>${m.h.toFixed(1)}</td><td>${m.v.toFixed(1)}</td></tr>`).join("")
+      : `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">표시할 투구가 없습니다.</td></tr>`) + "</tbody>";
+}
+function moveHover(e) {
+  const rect = e.currentTarget.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top, pad = MOVE_PAD;
+  const mx = (v) => pad + (v - MXR[0]) / (MXR[1] - MXR[0]) * (moveW - pad * 2);
+  const mz = (v) => moveH - pad - (v - MZR[0]) / (MZR[1] - MZR[0]) * (moveH - pad * 2);
+  let best = null, bd = 196;
+  for (const m of moveMeans) { const d = (mx(m.h) - x) ** 2 + (mz(m.v) - y) ** 2; if (d < bd) { bd = d; best = m; } }
+  if (!best) return hideTip();
+  showTip(e.clientX, e.clientY, `<b>${esc(D.types[best.t])}</b> 평균 · ${fmt(best.n)}구<br><span class="m">수평 ${best.h.toFixed(1)}cm · 수직 ${best.v.toFixed(1)}cm<br>${best.kmh.toFixed(1)}km/h</span>`);
+}
+
 function update() {
   filter();
   const agg = aggregate();
   renderStatline(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg); drawZone();
+  drawMove(); refreshTraj();
 }
 
 function onTheme() { if (!D) return; readColors(); update(); }

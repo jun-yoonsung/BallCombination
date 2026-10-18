@@ -10,6 +10,11 @@
 - sd는 투구 직전 점수차(투수팀 기준).
 - r은 타석 결과 인덱스*2 + 결정구 여부(1). 결과가 없는 타석은 null.
 - 카운트, 아웃, 주자, 타석, 결과, 포스트시즌 여부는 비트로 묶어 한 정수(s)에 담는다.
+- mx, mz는 무브먼트(cm, 포수 시점 수평 +가 1루 쪽 / 중력 제외 수직).
+- 투수의 투구 손(R/L)은 측정 시작 지점의 좌우 위치(x0) 중앙값 부호로 판단한다.
+
+궤적 파라미터는 용량이 커서 투수의 마지막 소속팀별로 traj/{팀 인덱스}.json에 따로 저장하고,
+웹에서는 그 팀 투수를 볼 때만 불러온다. y0는 항상 50ft라서 저장하지 않는다.
 """
 
 import argparse
@@ -19,8 +24,12 @@ import json
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+from statistics import median
+
+from .physics import from_row, movement
 
 ZONE_TOP, ZONE_BOT = 3.33, 1.61
+TRAJ_KEYS = ("x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az")  # 1/100 단위 정수로 저장
 RESULTS = ["B", "T", "S", "F", "H", "W", "V"]
 PA_RESULTS = ["삼진", "볼넷", "고의4구", "사구", "1루타", "2루타", "3루타", "홈런", "땅볼", "플라이",
               "라인드라이브", "병살타", "희생번트", "희생플라이", "실책출루", "야수선택", "번트아웃", "기타"]
@@ -55,7 +64,9 @@ def build(paths):
     teams, types, dates = Index(), Index(), Index()
     pitchers, batters = Index(), Index()
     pitcher_info, batter_info = {}, {}
-    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd", "r")}
+    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd", "r", "mx", "mz")}
+    release_x = {}  # 투수별 x0 목록 (투구 손 판단용)
+    traj = []  # (투구 인덱스, 투수 인덱스, 파라미터)
 
     rows = []
     for path in paths:
@@ -104,29 +115,47 @@ def build(paths):
         pa = r.get("pa_result")
         cols["r"].append(PA_RESULTS.index(pa) * 2 + _int(r.get("pa_last_pitch")) if pa in PA_RESULTS else None)
 
+        params = from_row(r)
+        mv = movement(params) if params else None
+        cols["mx"].append(None if mv is None else round(mv[0]))
+        cols["mz"].append(None if mv is None else round(mv[1]))
+        if params:
+            release_x.setdefault(p, []).append(params["x0"])
+            traj.append((len(cols["p"]) - 1, p, params))
+
     # 구종은 많이 던진 순서로 정렬해서 인덱스를 다시 매긴다.
     freq = Counter(cols["t"])
     order = sorted(range(len(types.items)), key=lambda i: -freq[i])
     remap = {old: new for new, old in enumerate(order)}
     cols["t"] = [remap[t] for t in cols["t"]]
 
-    return {
+    hands = {p: ("L" if median(xs) > 0 else "R") for p, xs in release_x.items()}
+    traj_by_team = {}
+    for i, p, params in traj:
+        t = traj_by_team.setdefault(pitcher_info[p][1], {"i": [], **{k: [] for k in TRAJ_KEYS}})
+        t["i"].append(i)
+        for k in TRAJ_KEYS:
+            t[k].append(round(params[k] * 100))
+
+    data = {
         "meta": {
             "generated": datetime.now().isoformat(timespec="minutes"),
             "count": len(cols["p"]),
             "games": len({r["game_id"] for r in rows}),
             "zone": [ZONE_BOT, ZONE_TOP],
             "packed": "balls:2 strikes:2 outs:2 bases:3 lefty:1 result:4 post:1",
+            "traj_y0": 50.0,
         },
         "teams": teams.items,
         "types": [types.items[i] for i in order],
         "results": RESULTS,
         "pa_results": PA_RESULTS,
         "dates": dates.items,
-        "pitchers": [list(pitcher_info[i]) for i in range(len(pitchers.items))],
+        "pitchers": [[*pitcher_info[i], hands.get(i)] for i in range(len(pitchers.items))],
         "batters": [list(batter_info[i]) for i in range(len(batters.items))],
         "cols": cols,
     }
+    return data, traj_by_team
 
 
 def main(argv=None):
@@ -136,11 +165,18 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     paths = sorted({p for pattern in args.csv for p in glob.glob(pattern)})
-    data = build(paths)
+    data, traj_by_team = build(paths)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    dump = lambda obj, path: path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    dump(data, out)
     print(f"{len(paths)}개 파일, 투구 {data['meta']['count']}개 -> {out} ({out.stat().st_size / 1e6:.1f}MB)")
+    traj_dir = out.parent / "traj"
+    traj_dir.mkdir(exist_ok=True)
+    for team, t in traj_by_team.items():
+        dump(t, traj_dir / f"{team}.json")
+    size = sum(f.stat().st_size for f in traj_dir.glob("*.json")) / 1e6
+    print(f"궤적 {sum(len(t['i']) for t in traj_by_team.values())}개 -> {traj_dir}/ (팀 {len(traj_by_team)}개, {size:.1f}MB)")
 
 
 if __name__ == "__main__":
