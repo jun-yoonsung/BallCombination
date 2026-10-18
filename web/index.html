@@ -3,227 +3,255 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: 필터 레일(좌) + 분석 영역(우). 분석 영역은 스트라이크존 / 구종 구성표 / 카운트별 볼배합 순. 좁으면 한 열. */
+/* Layout: 상단 바(검색) → 남색 선수 카드(지표·구종 막대) → 핵심 포인트 → 상황 필터 → 탭(개요 / 궤적·무브먼트 / 터널링 / 카운트). 색은 야구공의 남색 가죽과 빨간 실밥. */
 :root {
-  --bg: #f3f6f3;
+  --bg: #edf0f4;
   --surface: #ffffff;
-  --ink: #15201a;
-  --muted: #5a665f;
-  --faint: #8b958f;
-  --line: #dbe2dc;
-  --accent: #1d6a48;
-  --accent-soft: #e3efe8;
-  --zone: #15201a;
+  --surface-2: #f5f7fa;
+  --ink: #0e1a2b;
+  --muted: #556274;
+  --faint: #8a95a5;
+  --line: #d9dfe7;
+  --accent: #d23f2a;
+  --accent-soft: #fbe8e4;
+  --navy: #13294b;
+  --navy-2: #1c3763;
+  --on-navy: #f3f6fb;
+  --on-navy-muted: #a9b8d0;
+  --zone: #0e1a2b;
+  --shadow: 0 1px 2px rgb(14 26 43 / 0.06), 0 8px 24px rgb(14 26 43 / 0.06);
   --pt-ff: #e34948; --pt-ft: #eb6834; --pt-fc: #eda100; --pt-sl: #2a78d6;
   --pt-sw: #6250d6; --pt-cu: #008300; --pt-ch: #1baf7a; --pt-fo: #e87ba4; --pt-etc: #8a918c;
   --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
   --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e1411; --surface: #151d19; --ink: #e8eee9; --muted: #9ba69f; --faint: #6c7770;
-    --line: #29342e; --accent: #62c08f; --accent-soft: #1c2e25; --zone: #e8eee9;
+    --bg: #0a111d; --surface: #111a2a; --surface-2: #16213a; --ink: #e7edf6; --muted: #9aa6b8; --faint: #66748a;
+    --line: #243149; --accent: #ff6a55; --accent-soft: #3a1d1c; --navy: #13233d; --navy-2: #1b3156;
+    --on-navy: #f3f6fb; --on-navy-muted: #9fb0cb; --zone: #e7edf6; --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
     --pt-ff: #e66767; --pt-ft: #d95926; --pt-fc: #c98500; --pt-sl: #3987e5;
     --pt-sw: #9085e9; --pt-cu: #008300; --pt-ch: #199e70; --pt-fo: #d55181; --pt-etc: #7d857f;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0e1411; --surface: #151d19; --ink: #e8eee9; --muted: #9ba69f; --faint: #6c7770;
-  --line: #29342e; --accent: #62c08f; --accent-soft: #1c2e25; --zone: #e8eee9;
+  --bg: #0a111d; --surface: #111a2a; --surface-2: #16213a; --ink: #e7edf6; --muted: #9aa6b8; --faint: #66748a;
+  --line: #243149; --accent: #ff6a55; --accent-soft: #3a1d1c; --navy: #13233d; --navy-2: #1b3156;
+  --on-navy: #f3f6fb; --on-navy-muted: #9fb0cb; --zone: #e7edf6; --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.25);
   --pt-ff: #e66767; --pt-ft: #d95926; --pt-fc: #c98500; --pt-sl: #3987e5;
   --pt-sw: #9085e9; --pt-cu: #008300; --pt-ch: #199e70; --pt-fo: #d55181; --pt-etc: #7d857f;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   background: var(--bg); color: var(--ink);
-  font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  font-family: var(--font-body); font-size: 14px; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 40px;
+  padding-block: 0 48px;
 }
-.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.wrap > * { min-width: 0; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
-h1 { font-family: var(--font-display); font-weight: 400; font-size: 30px; letter-spacing: 0.01em; margin: 0; line-height: 1.1; text-wrap: balance; }
-h1 small { font-family: var(--font-data); font-size: 13px; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
-.source { color: var(--muted); font-size: 12px; }
-
-.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
-
-.filters { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
-@media (max-width: 860px) { .filters { position: static; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
-.field { display: grid; gap: 4px; min-width: 0; }
-.field label, .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
-select {
-  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
-  padding: 6px 8px; width: 100%; min-width: 0;
+/* 상단 바 */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px;
+  padding-block: 12px; background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
-select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.seg button { flex: 1; font: inherit; font-size: 13px; padding: 5px 0; border: 0; background: var(--bg); color: var(--muted); cursor: pointer; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
+.brand svg { flex: none; }
+.brand b { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.01em; white-space: nowrap; }
+.brand small { display: block; min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pick { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.pick select { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.combo { position: relative; width: min(320px, 100%); }
+.combo input {
+  width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 12px 8px 34px; min-width: 0;
+}
+.combo input::placeholder { color: var(--faint); }
+.combo .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--faint); pointer-events: none; }
+.combo ul {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0; max-height: 320px; overflow-y: auto;
+  margin: 0; padding: 6px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+}
+.combo li { display: flex; align-items: baseline; gap: 8px; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.combo li small { color: var(--muted); font-size: 12px; }
+.combo li em { margin-left: auto; font-style: normal; font-family: var(--font-data); font-size: 11px; color: var(--faint); }
+.combo li[aria-selected="true"], .combo li:hover { background: var(--accent-soft); }
+.combo li.empty { color: var(--muted); cursor: default; background: none; }
+
+/* 선수 카드 */
+.hero {
+  position: relative; overflow: hidden; border-radius: 18px; color: var(--on-navy);
+  background: radial-gradient(120% 140% at 100% 0%, var(--navy-2) 0%, var(--navy) 55%);
+  padding: 26px 28px 22px; display: grid; gap: 20px;
+}
+.hero .stitch { position: absolute; right: -60px; top: -40px; width: 360px; height: 360px; opacity: 0.55; pointer-events: none; }
+.hero-top { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 18px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: var(--on-navy-muted); }
+.hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 4px 0 0; letter-spacing: 0.01em; text-wrap: balance; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 6px; }
+.badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(255 255 255 / 0.16); white-space: nowrap; }
+.badge.hand { background: var(--accent); border-color: transparent; color: #fff; }
+.stats { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; border-top: 1px solid rgb(255 255 255 / 0.14); padding-top: 16px; }
+@media (max-width: 900px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 14px; } }
+.stat { display: grid; gap: 2px; padding-right: 12px; min-width: 0; }
+.stat b { font-family: var(--font-data); font-weight: 600; font-size: clamp(20px, 2.6vw, 28px); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat b small { font-size: 0.5em; font-weight: 500; color: var(--on-navy-muted); margin-left: 3px; }
+.stat i { font-style: normal; font-size: 12px; color: var(--on-navy-muted); }
+.arsenal { position: relative; display: grid; gap: 8px; }
+.arsenal-bar { display: flex; gap: 3px; height: 14px; }
+.arsenal-bar span { height: 100%; border-radius: 3px; min-width: 3px; transition: flex-grow 0.6s var(--ease); cursor: default; }
+.arsenal-keys { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--on-navy-muted); }
+.arsenal-keys span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.arsenal-keys i { width: 8px; height: 8px; border-radius: 50%; }
+.arsenal-keys b { color: var(--on-navy); font-family: var(--font-data); font-weight: 500; }
+
+/* 핵심 포인트 */
+.insights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1000px) { .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .insights { grid-template-columns: minmax(0, 1fr); } }
+.insight { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.insight .k { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; }
+.insight .v { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; }
+.insight .v i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.insight .d { font-size: 13px; color: var(--muted); }
+.insight .d b { color: var(--ink); font-family: var(--font-data); font-weight: 600; }
+
+/* 상황 필터 */
+.filterbar { display: grid; gap: 10px; }
+.quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.qchip, .more {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, transform 0.15s;
+}
+.qchip:hover, .more:hover { border-color: var(--accent); }
+.qchip:active, .more:active { transform: scale(0.97); }
+.qchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.more { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.more .n { background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px; padding: 0 7px; line-height: 18px; }
+.more svg { transition: transform 0.25s var(--ease); }
+.more[aria-expanded="true"] svg { transform: rotate(180deg); }
+.active { display: flex; flex-wrap: wrap; gap: 6px; }
+.achip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 6px 4px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--ink); border: 0; cursor: pointer; }
+.achip span { color: var(--muted); }
+.achip svg { opacity: 0.6; }
+.achip:hover svg { opacity: 1; }
+.drawer { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.35s var(--ease); }
+.drawer[data-open="true"] { grid-template-rows: 1fr; }
+.drawer > div { overflow: hidden; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-top: 2px; }
+.field { display: grid; gap: 5px; min-width: 0; align-content: start; }
+.field label, .flabel { font-size: 12px; font-weight: 600; color: var(--muted); }
+.field select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; width: 100%; min-width: 0; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface-2); min-width: 0; }
+.seg button { flex: 1; font-size: 13px; padding: 6px 8px; border: 0; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
 .seg button + button { border-left: 1px solid var(--line); }
-.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.reset { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; justify-self: start; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); font-weight: 600; }
+.reset { font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; justify-self: start; align-self: end; font-weight: 600; }
 
-main { display: grid; gap: 20px; min-width: 0; }
-.statline { display: flex; flex-wrap: wrap; gap: 6px 28px; align-items: baseline; }
-.statline .who { font-size: 22px; font-weight: 600; }
-.statline .who span { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 6px; }
-.stat { display: grid; }
-.stat b { font-family: var(--font-data); font-weight: 500; font-size: 20px; font-variant-numeric: tabular-nums; }
-.stat i { font-style: normal; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+/* 탭 */
+@media (max-width: 760px) { .topbar { position: static; } .tabs { position: static !important; } }
+.tabs { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 62px); z-index: 15; overflow-x: auto; scrollbar-width: none; background: var(--bg); }
+.tabs::-webkit-scrollbar { display: none; }
+.tablist { position: relative; display: flex; gap: 4px; border-bottom: 1px solid var(--line); min-width: max-content; }
+.tab { position: relative; padding: 10px 14px; border: 0; background: none; color: var(--muted); font-weight: 600; font-size: 14px; cursor: pointer; white-space: nowrap; transition: color 0.2s; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); }
+.tab-ink { position: absolute; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); transition: transform 0.35s var(--ease), width 0.35s var(--ease); left: 0; }
+.tabpanel { display: grid; gap: 18px; }
+.tabpanel.enter { animation: rise 0.4s var(--ease); }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
-.panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
-.panel .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
-.row3 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; }
-@media (max-width: 1060px) { .row3 { grid-template-columns: minmax(0, 1fr); } }
-.phead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; }
-.phead .seg { min-width: 0; }
-.phead .seg button { padding: 4px 10px; font-size: 12px; }
+/* 패널 */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; box-shadow: var(--shadow); }
+.panel h2 { font-size: 16px; font-weight: 700; margin: 0 0 2px; }
+.panel .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; max-width: 72ch; }
+.grid2 { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 18px; }
+.grid2b { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 1040px) { .grid2, .grid2b { grid-template-columns: minmax(0, 1fr); } }
+.stackcol { display: grid; gap: 18px; align-content: start; min-width: 0; }
+.phead { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
 .ctrls { display: flex; flex-wrap: wrap; gap: 8px; }
+.ctrls .seg button { padding: 5px 10px; font-size: 12px; }
 .canvas-box { position: relative; width: 100%; aspect-ratio: 4 / 3; max-width: 100%; }
-.canvas-box canvas { width: 100%; height: 100%; display: block; }
-.mini { margin-top: 10px; }
+.canvas-box canvas, .zone-box canvas { width: 100%; height: 100%; display: block; }
+.zone-box { position: relative; width: 100%; max-width: 360px; aspect-ratio: 5 / 5.4; margin: 0 auto; }
+.mini { margin-top: 12px; }
 .play { display: flex; gap: 6px; align-items: stretch; }
-.playbtn { font: inherit; font-size: 12px; font-weight: 600; color: var(--surface); background: var(--accent); border: 0; border-radius: 6px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
-.playbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tun-base { min-width: 140px; }
-#tuntable tbody tr { cursor: pointer; }
-#tuntable tbody tr[aria-selected="true"] td { background: var(--accent-soft); }
-#tuntable tbody tr:hover td { background: var(--bg); }
-.stackcol { display: grid; gap: 20px; align-content: start; min-width: 0; }
-.row2 { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 20px; }
-@media (max-width: 1060px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
-
-.zone-box { position: relative; width: 100%; max-width: 380px; aspect-ratio: 5 / 5.4; margin: 0 auto; }
-.zone-box canvas { width: 100%; height: 100%; display: block; }
-.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer; }
-.chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+.playbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #fff; background: var(--accent); border: 0; border-radius: 8px; padding: 5px 14px; cursor: pointer; white-space: nowrap; transition: transform 0.15s, filter 0.2s; }
+.playbtn:hover { filter: brightness(1.08); }
+.playbtn:active { transform: scale(0.96); }
+.tun-base { min-width: 160px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; justify-content: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px 4px 8px; cursor: pointer; transition: opacity 0.2s, transform 0.15s; }
+.chip:active { transform: scale(0.96); }
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; transition: background 0.2s; }
 .chip[aria-pressed="false"] { color: var(--faint); }
 .chip[aria-pressed="false"] .dot { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--faint); }
 .chip em { font-style: normal; font-family: var(--font-data); color: var(--muted); font-size: 11px; }
 
 .tablewrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th { text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--line); font-family: var(--font-data); font-size: 13px; white-space: nowrap; }
+th { text-align: right; font-size: 12px; font-weight: 600; color: var(--muted); padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { text-align: right; padding: 9px 8px; border-bottom: 1px solid var(--line); font-family: var(--font-data); font-size: 13px; white-space: nowrap; }
 th:first-child, td:first-child { text-align: left; font-family: var(--font-body); }
-td .tname { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+tbody tr { transition: background 0.15s; }
+tbody tr:hover td { background: var(--surface-2); }
+td .tname { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
 td .tname i { width: 10px; height: 10px; border-radius: 50%; }
-.bar { display: inline-block; vertical-align: middle; height: 6px; border-radius: 3px; background: var(--faint); margin-right: 8px; opacity: 0.55; }
+.bar { display: inline-block; vertical-align: middle; height: 6px; border-radius: 3px; margin-right: 8px; transition: width 0.5s var(--ease); }
 tr:last-child td { border-bottom: 0; }
-tr.total td { font-weight: 600; border-top: 1px solid var(--line); }
+tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: var(--surface-2); }
+#tuntable tbody tr { cursor: pointer; }
+#tuntable tbody tr[aria-selected="true"] td { background: var(--accent-soft); }
 
-.counts { display: grid; gap: 4px; }
-.crow { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 10px; align-items: center; }
-.crow .lab { font-family: var(--font-data); font-size: 13px; }
-.crow .lab small { color: var(--muted); font-size: 11px; }
+.counts { display: grid; gap: 5px; }
+.crow { display: grid; grid-template-columns: 52px minmax(0, 1fr) 60px; gap: 12px; align-items: center; }
+.crow .lab { font-family: var(--font-data); font-size: 14px; font-weight: 600; }
 .crow .n { font-family: var(--font-data); font-size: 12px; color: var(--muted); text-align: right; }
-.stack { display: flex; gap: 2px; height: 22px; }
-.stack .seg2 { height: 100%; min-width: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-data); font-size: 11px; color: #fff; overflow: hidden; cursor: default; }
-.stack .seg2:first-child { border-radius: 4px 0 0 4px; }
-.stack .seg2:last-child { border-radius: 0 4px 4px 0; }
-.stack .seg2:only-child { border-radius: 4px; }
-.stack.empty { background: var(--bg); border-radius: 4px; }
-.cgroup { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; margin-top: 8px; }
+.stack { display: flex; gap: 2px; height: 26px; }
+.stack .seg2 { height: 100%; min-width: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-data); font-size: 11px; font-weight: 600; color: #fff; overflow: hidden; cursor: default; transition: flex-grow 0.5s var(--ease), filter 0.15s; }
+.stack .seg2:hover { filter: brightness(1.1); }
+.stack .seg2:first-child { border-radius: 6px 0 0 6px; }
+.stack .seg2:last-child { border-radius: 0 6px 6px 0; }
+.stack .seg2:only-child { border-radius: 6px; }
+.stack.empty { background: var(--surface-2); border-radius: 6px; }
+.cgroup { font-size: 12px; color: var(--faint); font-weight: 600; letter-spacing: 0.06em; margin-top: 10px; }
 .cgroup:first-child { margin-top: 0; }
 
-.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); max-width: 240px; }
-.tip b { font-weight: 600; }
+.tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 12px; box-shadow: var(--shadow); max-width: 260px; }
+.tip b { font-weight: 700; }
 .tip .m { font-family: var(--font-data); color: var(--muted); }
 
-.state { padding: 40px 16px; text-align: center; color: var(--muted); }
-.note { color: var(--muted); font-size: 12px; max-width: 70ch; }
-@media (prefers-reduced-motion: no-preference) { .stack .seg2 { transition: flex-grow 0.25s ease; } }
+/* 로딩 */
+.loading { min-height: 60vh; display: grid; place-items: center; text-align: center; color: var(--muted); gap: 14px; align-content: center; }
+.loading .ball { width: 64px; height: 64px; animation: spin 1.1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.foot { color: var(--muted); font-size: 12px; max-width: 80ch; display: grid; gap: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 </style>
 
-<div class="wrap">
-  <header class="top">
-    <h1>KBO 볼배합 탐색기<small id="season"></small></h1>
-    <div class="source" id="source">네이버 스포츠 문자중계 투구 추적 데이터</div>
-  </header>
-
-  <div class="layout">
-    <aside class="filters" aria-label="필터">
-      <div class="field"><label for="f-team">팀</label><select id="f-team"></select></div>
-      <div class="field"><label for="f-pitcher">투수</label><select id="f-pitcher"></select></div>
-      <div class="field"><label id="l-stance">타자 타석</label>
-        <div class="seg" id="f-stance" role="group" aria-labelledby="l-stance">
-          <button type="button" data-v="all" aria-pressed="true">전체</button>
-          <button type="button" data-v="L" aria-pressed="false">좌타</button>
-          <button type="button" data-v="R" aria-pressed="false">우타</button>
-        </div>
-      </div>
-      <div class="field"><label for="f-count">카운트</label><select id="f-count"></select></div>
-      <div class="field"><label id="l-scope">투구 범위</label>
-        <div class="seg" id="f-scope" role="group" aria-labelledby="l-scope">
-          <button type="button" data-v="all" aria-pressed="true">모든 공</button>
-          <button type="button" data-v="last" aria-pressed="false">결정구</button>
-        </div>
-      </div>
-      <div class="field"><label for="f-pa">타석 결과</label>
-        <select id="f-pa">
-          <option value="all">전체</option>
-          <option value="so">삼진</option>
-          <option value="bb">볼넷·사구</option>
-          <option value="hit">안타</option>
-          <option value="xbh">장타 (2루타·3루타·홈런)</option>
-          <option value="hr">홈런</option>
-          <option value="out">범타 (땅볼·플라이·직선타·병살)</option>
-          <option value="gb">땅볼·병살</option>
-          <option value="fb">플라이·직선타</option>
-        </select>
-      </div>
-      <div class="field"><label for="f-runner">주자</label>
-        <select id="f-runner">
-          <option value="all">전체</option>
-          <option value="none">주자 없음</option>
-          <option value="on">주자 있음</option>
-          <option value="risp">득점권 (2·3루)</option>
-          <option value="1b">1루만</option>
-          <option value="full">만루</option>
-        </select>
-      </div>
-      <div class="field"><label id="l-outs">아웃</label>
-        <div class="seg" id="f-outs" role="group" aria-labelledby="l-outs">
-          <button type="button" data-v="all" aria-pressed="true">전체</button>
-          <button type="button" data-v="0" aria-pressed="false">0</button>
-          <button type="button" data-v="1" aria-pressed="false">1</button>
-          <button type="button" data-v="2" aria-pressed="false">2</button>
-        </div>
-      </div>
-      <div class="field"><label for="f-score">점수 상황 (투수팀 기준)</label>
-        <select id="f-score">
-          <option value="all">전체</option>
-          <option value="close">접전 (±2점 이내)</option>
-          <option value="lead">리드</option>
-          <option value="tie">동점</option>
-          <option value="trail">열세</option>
-        </select>
-      </div>
-      <div class="field"><label for="f-month">기간</label><select id="f-month"></select></div>
-      <div class="field"><label for="f-round">경기 구분</label>
-        <select id="f-round">
-          <option value="all">전체</option>
-          <option value="reg">정규시즌</option>
-          <option value="post">포스트시즌</option>
-        </select>
-      </div>
-      <button type="button" class="reset" id="reset">조건 초기화</button>
-    </aside>
-
-    <main id="main">
-      <div class="state" id="loading">투구 데이터를 불러오는 중…</div>
-    </main>
+<div class="wrap" id="app">
+  <div class="loading" id="loading">
+    <svg class="ball" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="var(--surface)" stroke="var(--line)" stroke-width="2"/><path d="M14 12c8 8 8 32 0 40M50 12c-8 8-8 32 0 40" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="3 3"/></svg>
+    <div><b style="color:var(--ink)">2026 KBO 투구 데이터를 불러오는 중</b><br>22만 구 · 약 9MB</div>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -247,15 +275,29 @@ const COUNT_GROUPS = {
   two: { label: "2스트라이크", test: (b, s) => s === 2 },
   full: { label: "풀카운트 (3-2)", test: (b, s) => b === 3 && s === 2 },
 };
+const DEFAULTS = { stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all" };
+// 한 번에 거는 상황 조건. 같은 키를 쓰는 조건끼리는 서로 바뀐다.
+const PRESETS = [
+  { id: "first", label: "초구", set: { count: "first" } },
+  { id: "two", label: "2스트라이크", set: { count: "two" } },
+  { id: "behind", label: "타자 유리 카운트", set: { count: "behind" } },
+  { id: "risp", label: "득점권", set: { runner: "risp" } },
+  { id: "putaway", label: "결정구", set: { scope: "last" } },
+  { id: "kpitch", label: "삼진 잡은 공", set: { scope: "last", pa: "so" } },
+];
+const PRESET_KEYS = [...new Set(PRESETS.flatMap((p) => Object.keys(p.set)))];
+const FILTER_LABEL = { stance: "타석", count: "카운트", runner: "주자", outs: "아웃", score: "점수", month: "기간", round: "구분", scope: "범위", pa: "타석 결과" };
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => n.toLocaleString("ko-KR");
 const pct = (a, b) => (b ? (100 * a / b) : 0);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ICON_X = `<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>`;
 
 let D, N, P, B, T, V, X, Z, S, DT, R, MX, MZ, MONTH, pitchCount;
 let colors = [];
-const state = { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all", hidden: new Set() };
+const state = { team: "all", pitcher: "all", ...DEFAULTS, hidden: new Set() };
 let sel = new Uint32Array(0);
 
 function readColors() {
@@ -335,51 +377,278 @@ function filter() {
   sel = out.subarray(0, k);
 }
 
-/* ---------- 필터 UI ---------- */
-function fillTeams() {
-  const opts = [`<option value="all">전체 구단</option>`].concat(
-    D.teams.map((t, i) => [t, i]).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([t, i]) => `<option value="${i}">${esc(t)}</option>`));
-  $("f-team").innerHTML = opts.join("");
+/* ---------- 화면 뼈대 ---------- */
+const STITCH = `<svg class="stitch" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="96" fill="none" stroke="rgb(255 255 255 / 0.08)" stroke-width="2"/>
+  <path d="M38 20c30 30 30 130 0 160M162 20c-30 30-30 130 0 160" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-dasharray="5 5" opacity="0.8"/></svg>`;
+
+function shell() {
+  $("app").innerHTML = `
+  <header class="topbar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="var(--surface)" stroke="var(--ink)" stroke-width="3"/><path d="M14 12c8 8 8 32 0 40M50 12c-8 8-8 32 0 40" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 4"/></svg>
+      <b>KBO 볼배합 탐색기</b><small id="season"></small>
+    </div>
+    <div class="pick">
+      <select id="f-team" aria-label="팀"></select>
+      <div class="combo">
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="p-search" type="text" role="combobox" aria-expanded="false" aria-controls="p-list" aria-autocomplete="list" placeholder="투수 이름 검색" autocomplete="off">
+        <ul id="p-list" role="listbox" aria-label="투수" hidden></ul>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    ${STITCH}
+    <div class="hero-top">
+      <div><div class="eyebrow" id="h-eyebrow"></div><h1 id="h-name"></h1></div>
+      <div class="badges" id="h-badges"></div>
+    </div>
+    <div class="stats" id="h-stats"></div>
+    <div class="arsenal"><div class="eyebrow">구종 구성</div><div class="arsenal-bar" id="h-bar"></div><div class="arsenal-keys" id="h-keys"></div></div>
+  </section>
+
+  <section class="insights" id="insights" aria-label="핵심 포인트"></section>
+
+  <section class="filterbar" aria-label="상황 필터">
+    <div class="quick" id="quick">
+      ${PRESETS.map((p) => `<button type="button" class="qchip" data-preset="${p.id}" aria-pressed="false">${p.label}</button>`).join("")}
+      <button type="button" class="more" id="more" aria-expanded="false" aria-controls="drawer">상황 필터 <span class="n" id="more-n" hidden></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="active" id="active"></div>
+    <div class="drawer" id="drawer" data-open="false"><div><div class="fields">
+      <div class="field"><span class="flabel" id="l-stance">타자 타석</span>
+        <div class="seg" id="f-stance" role="group" aria-labelledby="l-stance">
+          <button type="button" data-v="all" aria-pressed="true">전체</button><button type="button" data-v="L" aria-pressed="false">좌타</button><button type="button" data-v="R" aria-pressed="false">우타</button>
+        </div></div>
+      <div class="field"><label for="f-count">카운트</label><select id="f-count"></select></div>
+      <div class="field"><span class="flabel" id="l-scope">투구 범위</span>
+        <div class="seg" id="f-scope" role="group" aria-labelledby="l-scope">
+          <button type="button" data-v="all" aria-pressed="true">모든 공</button><button type="button" data-v="last" aria-pressed="false">결정구</button>
+        </div></div>
+      <div class="field"><label for="f-pa">타석 결과</label>
+        <select id="f-pa"><option value="all">전체</option><option value="so">삼진</option><option value="bb">볼넷·사구</option><option value="hit">안타</option>
+          <option value="xbh">장타 (2루타·3루타·홈런)</option><option value="hr">홈런</option><option value="out">범타 (땅볼·플라이·직선타·병살)</option>
+          <option value="gb">땅볼·병살</option><option value="fb">플라이·직선타</option></select></div>
+      <div class="field"><label for="f-runner">주자</label>
+        <select id="f-runner"><option value="all">전체</option><option value="none">주자 없음</option><option value="on">주자 있음</option>
+          <option value="risp">득점권 (2·3루)</option><option value="1b">1루만</option><option value="full">만루</option></select></div>
+      <div class="field"><span class="flabel" id="l-outs">아웃</span>
+        <div class="seg" id="f-outs" role="group" aria-labelledby="l-outs">
+          <button type="button" data-v="all" aria-pressed="true">전체</button><button type="button" data-v="0" aria-pressed="false">0</button><button type="button" data-v="1" aria-pressed="false">1</button><button type="button" data-v="2" aria-pressed="false">2</button>
+        </div></div>
+      <div class="field"><label for="f-score">점수 상황 (투수팀 기준)</label>
+        <select id="f-score"><option value="all">전체</option><option value="close">접전 (±2점 이내)</option><option value="lead">리드</option><option value="tie">동점</option><option value="trail">열세</option></select></div>
+      <div class="field"><label for="f-month">기간</label><select id="f-month"></select></div>
+      <div class="field"><label for="f-round">경기 구분</label>
+        <select id="f-round"><option value="all">전체</option><option value="reg">정규시즌</option><option value="post">포스트시즌</option></select></div>
+      <button type="button" class="reset" id="reset">조건 모두 지우기</button>
+    </div></div></div>
+  </section>
+
+  <nav class="tabs" aria-label="분석 화면">
+    <div class="tablist" role="tablist" id="tablist">
+      <button type="button" class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">개요</button>
+      <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">궤적 · 무브먼트</button>
+      <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">터널링</button>
+      <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">카운트별 볼배합</button>
+      <span class="tab-ink" id="tab-ink"></span>
+    </div>
+  </nav>
+
+  <section class="tabpanel" role="tabpanel" id="overview" aria-labelledby="tab-overview">
+    <div class="grid2">
+      <section class="panel" aria-labelledby="h-zone">
+        <h2 id="h-zone">투구 위치</h2>
+        <p class="sub">포수 시점. 점에 마우스를 올리면 그 공의 상황이 나오고, 아래 구종 버튼으로 켜고 끌 수 있습니다.</p>
+        <div class="zone-box" id="zonebox"><canvas id="zone" role="img" aria-label="스트라이크존 투구 분포"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </section>
+      <div class="stackcol">
+        <section class="panel" aria-labelledby="h-mix">
+          <h2 id="h-mix">구종 구성</h2>
+          <p class="sub">구속 km/h · S% = 볼이 아닌 공 비율 · 헛스윙% = 스윙 중 헛스윙 비율</p>
+          <div class="tablewrap"><table id="mix"></table></div>
+        </section>
+        <section class="panel" aria-labelledby="h-fin">
+          <h2 id="h-fin">결정구 결과</h2>
+          <p class="sub">타석의 마지막 공을 구종별로 모은 결과 · 피안타율 = 안타 ÷ 타수 (볼넷·사구·희생타 제외)</p>
+          <div class="tablewrap"><table id="fin"></table></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="tabpanel" role="tabpanel" id="trajectory" aria-labelledby="tab-trajectory" hidden>
+    <section class="panel" aria-labelledby="h-traj">
+      <div class="phead">
+        <div><h2 id="h-traj">투구 궤적</h2>
+        <p class="sub">측정 시작(홈에서 50ft)부터 홈플레이트까지. 그 앞 릴리스 구간(점선)은 같은 식으로 이어 그린 추정입니다.</p></div>
+        <div class="ctrls">
+          <div class="seg" id="traj-view" role="group" aria-label="시점">
+            <button type="button" data-v="catcher" aria-pressed="true">포수 시점</button><button type="button" data-v="side" aria-pressed="false">옆</button><button type="button" data-v="top" aria-pressed="false">위</button>
+          </div>
+          <div class="seg" id="traj-mode" role="group" aria-label="표시 방식">
+            <button type="button" data-v="avg" aria-pressed="true">구종 평균</button><button type="button" data-v="each" aria-pressed="false">개별 투구</button>
+          </div>
+          <div class="play">
+            <button type="button" class="playbtn" id="traj-play"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>재생</button>
+            <div class="seg" id="traj-speed" role="group" aria-label="재생 속도">
+              <button type="button" data-v="1" aria-pressed="false">실제 속도</button><button type="button" data-v="0.25" aria-pressed="true">1/4 속도</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="canvas-box" id="trajbox" style="aspect-ratio: 16 / 9"><canvas id="traj" role="img" aria-label="구종별 투구 궤적"></canvas></div>
+    </section>
+    <section class="panel" aria-labelledby="h-move">
+      <h2 id="h-move">무브먼트</h2>
+      <p class="sub">홈에서 40ft 지점부터, 회전이 없을 때(중력만 받을 때)보다 공이 더 움직인 거리. 포수 시점, 단위 cm. 구장 장비 차이로 ±5cm 정도 오차가 있습니다.</p>
+      <div class="grid2b">
+        <div class="canvas-box" id="movebox" style="aspect-ratio: 1 / 1; max-width: 560px"><canvas id="move" role="img" aria-label="구종별 무브먼트 분포"></canvas></div>
+        <div class="tablewrap"><table id="movetable"></table></div>
+      </div>
+    </section>
+  </section>
+
+  <section class="tabpanel" role="tabpanel" id="tunnel" aria-labelledby="tab-tunnel" hidden>
+    <section class="panel" aria-labelledby="h-tun">
+      <div class="phead">
+        <div><h2 id="h-tun">터널링</h2>
+        <p class="sub">두 구종이 언제까지 같은 길로 오다가 갈라지는지 봅니다. 타자 판단 시점은 홈 도착 0.167초 전(홈에서 약 7m)으로, 이때 가까울수록 타자가 구종을 구분하기 어렵습니다. 갈라짐 배율 = 홈 도착 차이 ÷ 판단 시점 차이이고, 클수록 늦게 갈라져 타자를 속이기 좋습니다.</p></div>
+        <div class="field tun-base"><label for="tun-base">기준 구종</label><select id="tun-base"></select></div>
+      </div>
+      <div class="grid2b">
+        <div class="canvas-box" id="tunbox"><canvas id="tun" role="img" aria-label="두 구종의 궤적 비교 (포수 시점)"></canvas></div>
+        <div class="canvas-box" id="sepbox"><canvas id="sep" role="img" aria-label="시간에 따른 두 구종 사이 거리"></canvas></div>
+      </div>
+      <div class="tablewrap mini"><table id="tuntable"></table></div>
+    </section>
+  </section>
+
+  <section class="tabpanel" role="tabpanel" id="counts-tab" aria-labelledby="tab-counts" hidden>
+    <section class="panel" aria-labelledby="h-count">
+      <h2 id="h-count">카운트별 볼배합</h2>
+      <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
+      <div class="counts" id="counts"></div>
+    </section>
+  </section>
+
+  <footer class="foot">
+    <span>데이터: 네이버 스포츠 문자중계 투구 추적값 (2026 정규시즌·포스트시즌). 좌우 위치·높이 단위는 ft(30.48cm), 스트라이크존은 타자별 존을 리그 평균 높이에 맞춰 정규화했습니다.</span>
+    <span>회전수는 원본에 없어 제공하지 않습니다. 투구 추적값이 없는 공은 위치·궤적 그림에서만 빠집니다.</span>
+  </footer>`;
 }
-function fillPitchers() {
+
+/* ---------- 투수 선택 ---------- */
+function fillTeams() {
+  $("f-team").innerHTML = [`<option value="all">전체 구단</option>`].concat(
+    D.teams.map((t, i) => [t, i]).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([t, i]) => `<option value="${i}">${esc(t)}</option>`)).join("");
+}
+let comboItems = [], comboActive = -1;
+function pitcherLabel() {
+  if (state.pitcher !== "all") return D.pitchers[+state.pitcher][0];
+  return "";
+}
+function comboOpen(query) {
+  const q = query.trim();
   const teamIdx = state.team === "all" ? -1 : +state.team;
   const list = D.pitchers.map((p, i) => ({ i, name: p[0], team: p[1], n: pitchCount[i] }))
-    .filter((p) => p.n > 0 && (teamIdx < 0 || p.team === teamIdx))
-    .sort((a, b) => b.n - a.n);
-  const opts = [`<option value="all">${teamIdx < 0 ? "리그 전체 투수" : "팀 전체 투수"}</option>`].concat(
-    list.map((p) => `<option value="${p.i}">${esc(p.name)}${teamIdx < 0 ? " · " + esc(D.teams[p.team]) : ""} (${fmt(p.n)}구)</option>`));
-  $("f-pitcher").innerHTML = opts.join("");
-  $("f-pitcher").value = state.pitcher;
-  if ($("f-pitcher").value !== state.pitcher) { state.pitcher = "all"; $("f-pitcher").value = "all"; }
+    .filter((p) => p.n > 0 && (q ? p.name.includes(q) : (teamIdx < 0 || p.team === teamIdx)))
+    .sort((a, b) => b.n - a.n).slice(0, 60);
+  const all = { i: "all", name: teamIdx < 0 ? "리그 전체 투수" : `${D.teams[teamIdx]} 투수 전체` };
+  comboItems = q ? list : [all, ...list];
+  comboActive = comboItems.findIndex((x) => String(x.i) === state.pitcher);
+  const ul = $("p-list");
+  ul.innerHTML = comboItems.length ? comboItems.map((x, k) => `<li role="option" id="p-opt-${k}" data-k="${k}" aria-selected="${k === comboActive}">
+      ${esc(x.name)}${x.team != null ? `<small>${esc(D.teams[x.team])}${D.pitchers[x.i][2] ? " · " + (D.pitchers[x.i][2] === "L" ? "좌투" : "우투") : ""}</small><em>${fmt(x.n)}구</em>` : ""}</li>`).join("")
+    : `<li class="empty">“${esc(q)}” 투수를 찾지 못했습니다</li>`;
+  ul.hidden = false; $("p-search").setAttribute("aria-expanded", "true");
+  scrollActive();
 }
+function comboClose() { $("p-list").hidden = true; $("p-search").setAttribute("aria-expanded", "false"); $("p-search").value = pitcherLabel(); }
+function scrollActive() {
+  for (const li of $("p-list").querySelectorAll("li[data-k]")) li.setAttribute("aria-selected", String(+li.dataset.k === comboActive));
+  const el = $("p-opt-" + comboActive);
+  if (el) { el.scrollIntoView({ block: "nearest" }); $("p-search").setAttribute("aria-activedescendant", el.id); }
+}
+function comboPick(k) {
+  const x = comboItems[k]; if (!x) return;
+  state.pitcher = String(x.i);
+  if (x.team != null && state.team !== "all" && +state.team !== x.team) state.team = "all";
+  $("f-team").value = state.team;
+  comboClose(); $("p-search").blur(); update(true);
+}
+function bindCombo() {
+  const input = $("p-search");
+  input.addEventListener("focus", () => { input.select(); comboOpen(""); });
+  input.addEventListener("input", () => comboOpen(input.value));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); if ($("p-list").hidden) comboOpen(input.value); comboActive = Math.min(comboItems.length - 1, comboActive + 1); scrollActive(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); comboActive = Math.max(0, comboActive - 1); scrollActive(); }
+    else if (e.key === "Enter") { e.preventDefault(); comboPick(comboActive < 0 ? 0 : comboActive); }
+    else if (e.key === "Escape") { comboClose(); input.blur(); }
+  });
+  $("p-list").addEventListener("mousedown", (e) => { const li = e.target.closest("li[data-k]"); if (li) { e.preventDefault(); comboPick(+li.dataset.k); } });
+  input.addEventListener("blur", () => setTimeout(comboClose, 120));
+  $("f-team").addEventListener("change", (e) => { state.team = e.target.value; state.pitcher = "all"; $("p-search").value = ""; update(true); });
+}
+
+/* ---------- 상황 필터 ---------- */
 function fillCounts() {
-  const opts = [`<option value="all">전체</option>`, `<optgroup label="상황">`]
+  $("f-count").innerHTML = [`<option value="all">전체</option>`, `<optgroup label="상황">`]
     .concat(Object.entries(COUNT_GROUPS).map(([k, g]) => `<option value="${k}">${g.label}</option>`))
     .concat([`</optgroup><optgroup label="카운트 (볼-스트라이크)">`])
-    .concat(COUNTS.map(([b, s]) => `<option value="${b}-${s}">${b}-${s}</option>`)).concat(["</optgroup>"]);
-  $("f-count").innerHTML = opts.join("");
+    .concat(COUNTS.map(([b, s]) => `<option value="${b}-${s}">${b}-${s}</option>`)).concat(["</optgroup>"]).join("");
 }
 function fillMonths() {
   $("f-month").innerHTML = [`<option value="all">시즌 전체</option>`]
     .concat(MONTH.list.map((m, i) => `<option value="${i}">${+m.slice(5)}월</option>`)).join("");
 }
-function syncControls() {
-  for (const k of ["team", "count", "runner", "score", "month", "round", "pa"]) $("f-" + k).value = state[k];
-  fillPitchers();
-  for (const k of ["stance", "outs", "scope"]) for (const b of $("f-" + k).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === state[k]));
+function filterText(k) {
+  const v = state[k];
+  if (k === "stance") return v === "L" ? "좌타" : "우타";
+  if (k === "outs") return `${v}아웃`;
+  if (k === "scope") return "결정구만";
+  const el = $("f-" + k), opt = el && [...el.options].find((o) => o.value === v);
+  return opt ? opt.textContent : v;
 }
-function bindControls() {
-  $("f-team").addEventListener("change", (e) => { state.team = e.target.value; state.pitcher = "all"; fillPitchers(); update(); });
-  $("f-pitcher").addEventListener("change", (e) => { state.pitcher = e.target.value; update(); });
+function syncControls() {
+  for (const k of ["count", "runner", "score", "month", "round", "pa"]) $("f-" + k).value = state[k];
+  for (const k of ["stance", "outs", "scope"]) for (const b of $("f-" + k).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === state[k]));
+  $("f-team").value = state.team;
+  if (document.activeElement !== $("p-search")) $("p-search").value = pitcherLabel();
+  // 빠른 조건은 그 조건이 건드리는 값이 모두 그 조건과 같을 때만 켜진 것으로 본다
+  for (const b of $("quick").querySelectorAll("[data-preset]")) {
+    const p = PRESETS.find((x) => x.id === b.dataset.preset);
+    b.setAttribute("aria-pressed", String(PRESET_KEYS.every((k) => state[k] === (p.set[k] ?? DEFAULTS[k]))));
+  }
+  const act = Object.keys(DEFAULTS).filter((k) => state[k] !== DEFAULTS[k]);
+  $("active").innerHTML = act.map((k) => `<button type="button" class="achip" data-k="${k}" aria-label="${FILTER_LABEL[k]} 조건 지우기"><span>${FILTER_LABEL[k]}</span>${esc(filterText(k))}${ICON_X}</button>`).join("");
+  $("more-n").hidden = !act.length; $("more-n").textContent = act.length;
+}
+function bindFilters() {
   for (const k of ["count", "runner", "score", "month", "round", "pa"]) $("f-" + k).addEventListener("change", (e) => { state[k] = e.target.value; update(); });
   for (const k of ["stance", "outs", "scope"]) $("f-" + k).addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    state[k] = b.dataset.v; syncControls(); update();
+    state[k] = b.dataset.v; update();
   });
-  $("reset").addEventListener("click", () => {
-    Object.assign(state, { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all" });
-    state.hidden.clear(); syncControls(); update();
+  $("quick").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-preset]"); if (!b) return;
+    const p = PRESETS.find((x) => x.id === b.dataset.preset);
+    const wasOn = b.getAttribute("aria-pressed") === "true";
+    // 다른 빠른 조건을 지우고 이것만 건다. 이미 켜져 있으면 끈다.
+    for (const q of PRESETS) for (const k of Object.keys(q.set)) state[k] = DEFAULTS[k];
+    if (!wasOn) Object.assign(state, p.set);
+    update();
   });
+  $("more").addEventListener("click", () => {
+    const open = $("drawer").dataset.open !== "true";
+    $("drawer").dataset.open = String(open); $("more").setAttribute("aria-expanded", String(open));
+  });
+  $("active").addEventListener("click", (e) => { const c = e.target.closest(".achip"); if (c) { state[c.dataset.k] = DEFAULTS[c.dataset.k]; update(); } });
+  $("reset").addEventListener("click", () => { Object.assign(state, DEFAULTS); state.hidden.clear(); update(); });
 }
 
 /* ---------- 집계 ---------- */
@@ -401,180 +670,168 @@ function aggregate() {
   }
   return { by, byCount, fin };
 }
+function finLine(arr) {
+  const idx = (names) => names.map((n) => D.pa_results.indexOf(n));
+  const sum = (ids) => ids.reduce((a, i) => a + arr[i], 0);
+  const pa = arr.reduce((a, v) => a + v, 0);
+  const h = sum(idx(["1루타", "2루타", "3루타", "홈런"]));
+  const ab = pa - sum(idx(["볼넷", "고의4구", "사구", "희생번트", "희생플라이"]));
+  return { pa, k: sum(idx(["삼진"])), bb: sum(idx(["볼넷", "고의4구", "사구"])), h, xb: sum(idx(["2루타", "3루타", "홈런"])), ab };
+}
+const avgStr = (h, ab) => ab ? (h / ab).toFixed(3).replace(/^0/, "") : "–";
 
-/* ---------- 렌더 ---------- */
-function shell() {
-  $("main").innerHTML = `
-    <div class="statline" id="statline"></div>
-    <div class="row2">
-      <section class="panel" aria-labelledby="h-zone">
-        <h2 id="h-zone">투구 위치</h2>
-        <p class="sub">포수 시점 · 스트라이크존은 타자별 존을 리그 평균 높이에 맞춰 정규화</p>
-        <div class="zone-box" id="zonebox"><canvas id="zone" role="img" aria-label="스트라이크존 투구 분포"></canvas></div>
-        <div class="legend" id="legend"></div>
-      </section>
-      <div class="stackcol">
-      <section class="panel" aria-labelledby="h-mix">
-        <h2 id="h-mix">구종 구성</h2>
-        <p class="sub">구속 km/h · S% = 볼이 아닌 공 비율 · 헛스윙% = 스윙 중 헛스윙 비율</p>
-        <div class="tablewrap"><table id="mix"></table></div>
-      </section>
-      <section class="panel" aria-labelledby="h-fin">
-        <h2 id="h-fin">결정구 결과</h2>
-        <p class="sub">타석의 마지막 공을 구종별로 모은 결과 · 피안타율 = 안타 / 타수 (볼넷·사구·희생타 제외)</p>
-        <div class="tablewrap"><table id="fin"></table></div>
-      </section>
-      </div>
-    </div>
-    <div class="row3">
-      <section class="panel" aria-labelledby="h-traj">
-        <div class="phead">
-          <div><h2 id="h-traj">투구 궤적</h2>
-          <p class="sub" id="traj-sub">측정 시작(홈에서 50ft)부터 홈플레이트까지. 그 앞쪽 릴리스 구간은 같은 식으로 이어 그린 추정입니다.</p></div>
-          <div class="ctrls">
-            <div class="seg" id="traj-view" role="group" aria-label="시점">
-              <button type="button" data-v="catcher" aria-pressed="true">포수 시점</button>
-              <button type="button" data-v="side" aria-pressed="false">옆</button>
-              <button type="button" data-v="top" aria-pressed="false">위</button>
-            </div>
-            <div class="seg" id="traj-mode" role="group" aria-label="표시 방식">
-              <button type="button" data-v="avg" aria-pressed="true">구종 평균</button>
-              <button type="button" data-v="each" aria-pressed="false">개별 투구</button>
-            </div>
-            <div class="play">
-              <button type="button" class="playbtn" id="traj-play">▶ 재생</button>
-              <div class="seg" id="traj-speed" role="group" aria-label="재생 속도">
-                <button type="button" data-v="1" aria-pressed="false">실제 속도</button>
-                <button type="button" data-v="0.25" aria-pressed="true">1/4 속도</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="canvas-box" id="trajbox"><canvas id="traj" role="img" aria-label="구종별 투구 궤적"></canvas></div>
-      </section>
-      <section class="panel" aria-labelledby="h-move">
-        <h2 id="h-move">무브먼트</h2>
-        <p class="sub">홈에서 40ft 지점부터, 회전이 없을 때(중력만 받을 때)보다 공이 더 움직인 거리. 포수 시점, 단위 cm. 구장 장비 차이로 ±5cm 정도 오차가 있습니다.</p>
-        <div class="canvas-box" id="movebox"><canvas id="move" role="img" aria-label="구종별 무브먼트 분포"></canvas></div>
-        <div class="tablewrap mini"><table id="movetable"></table></div>
-      </section>
-    </div>
-    <section class="panel" aria-labelledby="h-tun">
-      <div class="phead">
-        <div><h2 id="h-tun">터널링</h2>
-        <p class="sub">두 구종이 언제까지 같은 길로 오다가 갈라지는지. 타자 판단 시점은 홈 도착 0.167초 전(홈에서 약 7m)으로, 이때 가까울수록 타자가 구종을 구분하기 어렵습니다. 갈라짐 배율 = 홈 도착 차이 ÷ 판단 시점 차이로, 클수록 늦게 갈라져 타자를 속이기 좋습니다. 표에서 구종을 누르면 그림에 겹쳐 그립니다.</p></div>
-        <div class="field tun-base"><label for="tun-base">기준 구종</label><select id="tun-base"></select></div>
-      </div>
-      <div class="row3">
-        <div class="canvas-box" id="tunbox"><canvas id="tun" role="img" aria-label="두 구종의 궤적 비교 (포수 시점)"></canvas></div>
-        <div class="canvas-box" id="sepbox"><canvas id="sep" role="img" aria-label="시간에 따른 두 구종 사이 거리"></canvas></div>
-      </div>
-      <div class="tablewrap mini"><table id="tuntable"></table></div>
-    </section>
-    <section class="panel" aria-labelledby="h-count">
-      <h2 id="h-count">카운트별 볼배합</h2>
-      <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
-      <div class="counts" id="counts"></div>
-    </section>
-    <p class="note">좌우 위치와 높이 단위는 ft(30.48cm). 투구 추적값이 없는 공은 위치 그림에서만 빠집니다. 카운트 필터를 걸면 카운트별 볼배합은 해당 카운트만 표시됩니다.</p>`;
-  setupZone();
-  setupTrajMove();
+/* ---------- 숫자 올라가는 효과 ---------- */
+function countTo(el, to, decimals = 0, suffix = "") {
+  const from = el._v ?? 0;
+  el._v = to;
+  const show = (v) => { el.innerHTML = (Number.isFinite(v) ? (decimals ? v.toFixed(decimals) : fmt(Math.round(v))) : "–") + suffix; };
+  if (!Number.isFinite(to) || REDUCED || from === to) return show(to);
+  const start = performance.now(), dur = 550;
+  const step = (now) => {
+    const k = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - k, 3);
+    show(from + (to - from) * e);
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
-function renderStatline(agg) {
+/* ---------- 선수 카드 ---------- */
+function renderHero(agg) {
   const pit = state.pitcher === "all" ? null : D.pitchers[+state.pitcher];
-  const hand = pit && pit[2] ? ` · ${pit[2] === "L" ? "좌투" : "우투"}` : "";
-  const who = pit ? `${esc(pit[0])}<span>${esc(D.teams[pit[1]])}${hand}</span>`
-    : state.team === "all" ? "리그 전체" : `${esc(D.teams[+state.team])}<span>팀 투수 전체</span>`;
-  const ffIdx = D.types.indexOf("직구");
-  const ff = ffIdx >= 0 ? agg.by[ffIdx] : null;
-  let vmax = 0; for (const a of agg.by) vmax = Math.max(vmax, a.vMax);
-  const pitchersN = new Set(); const gamesN = new Set();
-  for (const i of sel) { pitchersN.add(P[i]); gamesN.add(DT[i]); }
-  $("statline").innerHTML = `
-    <div class="who">${who}</div>
-    <div class="stat"><b>${fmt(sel.length)}</b><i>투구</i></div>
-    ${pit ? "" : `<div class="stat"><b>${fmt(pitchersN.size)}</b><i>투수</i></div>`}
-    <div class="stat"><b>${ff && ff.vN ? (ff.vSum / ff.vN).toFixed(1) : "–"}</b><i>직구 평균 km/h</i></div>
-    <div class="stat"><b>${vmax || "–"}</b><i>최고 km/h</i></div>`;
+  const teamName = pit ? D.teams[pit[1]] : state.team === "all" ? null : D.teams[+state.team];
+  $("h-eyebrow").textContent = pit ? `${teamName} · 2026 시즌` : teamName ? `${teamName} 투수진 · 2026 시즌` : "KBO 리그 전체 · 2026 시즌";
+  const name = pit ? pit[0] : teamName ? `${teamName} 투수 전체` : "리그 전체 투수";
+  const h1 = $("h-name");
+  if (h1.textContent !== name) {
+    h1.textContent = name;
+    if (!REDUCED) h1.animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 420, easing: "cubic-bezier(0.2,0.8,0.2,1)" });
+  }
+  const pitchers = new Set(); for (const i of sel) pitchers.add(P[i]);
+  $("h-badges").innerHTML = pit
+    ? `${pit[2] ? `<span class="badge hand">${pit[2] === "L" ? "좌투" : "우투"}</span>` : ""}<span class="badge">${fmt(pitchCount[+state.pitcher])}구 · 시즌</span>`
+    : `<span class="badge">투수 ${fmt(pitchers.size)}명</span>`;
+
+  let tot = { n: 0, swing: 0, whiff: 0, vMax: 0 };
+  for (const a of agg.by) { tot.n += a.n; tot.swing += a.swing; tot.whiff += a.whiff; tot.vMax = Math.max(tot.vMax, a.vMax); }
+  const ff = agg.by[D.types.indexOf("직구")];
+  const total = new Uint32Array(D.pa_results.length);
+  for (const arr of agg.fin) arr.forEach((v, j) => total[j] += v);
+  const fl = finLine(total);
+  const cells = [
+    ["n", "투구", tot.n, 0, ""],
+    ["ff", "직구 평균", ff && ff.vN ? ff.vSum / ff.vN : NaN, 1, "<small>km/h</small>"],
+    ["max", "최고 구속", tot.vMax || NaN, 0, "<small>km/h</small>"],
+    ["whiff", "헛스윙률", tot.swing ? pct(tot.whiff, tot.swing) : NaN, 1, "<small>%</small>"],
+    ["k", "결정구 삼진율", fl.pa ? pct(fl.k, fl.pa) : NaN, 1, "<small>%</small>"],
+    ["avg", "피안타율", null, 0, ""],
+  ];
+  const box = $("h-stats");
+  if (!box.children.length) box.innerHTML = cells.map(([id, label]) => `<div class="stat"><b id="st-${id}">–</b><i>${label}</i></div>`).join("");
+  for (const [id, , v, d, suf] of cells) {
+    if (id === "avg") $("st-avg").textContent = avgStr(fl.h, fl.ab);
+    else countTo($("st-" + id), v, d, suf);
+  }
+  // 구종 막대
+  const rows = agg.by.map((a, t) => ({ t, ...a })).filter((r) => r.n > 0).sort((a, b) => b.n - a.n);
+  const bar = $("h-bar");
+  const existing = new Map([...bar.children].map((el) => [+el.dataset.t, el]));
+  for (const el of bar.children) el.style.flexGrow = 0;
+  rows.forEach((r) => {
+    let el = existing.get(r.t);
+    if (!el) { el = document.createElement("span"); el.dataset.t = r.t; el.style.flexGrow = 0; bar.appendChild(el); }
+    el.style.background = colors[r.t];
+    el.dataset.tip = `${D.types[r.t]}|${fmt(r.n)}구 · ${pct(r.n, tot.n).toFixed(1)}%${r.vN ? ` · 평균 ${(r.vSum / r.vN).toFixed(1)}km/h` : ""}`;
+    bar.appendChild(el);
+    requestAnimationFrame(() => { el.style.flexGrow = r.n; });
+  });
+  for (const [t, el] of existing) if (!rows.some((r) => r.t === t)) el.remove();
+  $("h-keys").innerHTML = rows.slice(0, 8).map((r) => `<span><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])} <b>${pct(r.n, tot.n).toFixed(0)}%</b></span>`).join("");
 }
 
+/* ---------- 핵심 포인트 ---------- */
+function renderInsights(agg) {
+  const top = (arrs) => {
+    const sum = new Float64Array(D.types.length); let n = 0;
+    for (const a of arrs) a.forEach((v, t) => { sum[t] += v; n += v; });
+    let best = -1; sum.forEach((v, t) => { if (best < 0 || v > sum[best]) best = t; });
+    return n ? { t: best, p: pct(sum[best], n), n } : null;
+  };
+  const byC = (test) => COUNTS.map(([b, s], ci) => test(b, s) ? agg.byCount[ci] : null).filter(Boolean);
+  const main = top([agg.by.map((a) => a.n)]);
+  const first = top(byC((b, s) => b === 0 && s === 0));
+  const two = top(byC((b, s) => s === 2));
+  const behind = top(byC((b, s) => b > s));
+  let put = null;
+  agg.fin.forEach((arr, t) => { const l = finLine(arr); if (l.pa >= 15 && (!put || l.k / l.pa > put.k / put.pa)) put = { t, ...l }; });
+  const card = (k, x, desc) => `<article class="insight"><div class="k">${k}</div>` + (x
+    ? `<div class="v"><i style="background:${colors[x.t]}"></i>${esc(D.types[x.t])}</div><div class="d">${desc(x)}</div>`
+    : `<div class="v" style="color:var(--faint)">–</div><div class="d">이 조건에 해당하는 공이 없습니다</div>`) + `</article>`;
+  $("insights").innerHTML =
+    card("주무기", main, (x) => `전체 투구의 <b>${x.p.toFixed(0)}%</b>`) +
+    card("삼진 잡는 결정구", put, (x) => `결정구로 쓴 <b>${fmt(x.pa)}</b>타석 중 삼진 <b>${pct(x.k, x.pa).toFixed(0)}%</b>`) +
+    card("초구", first, (x) => `0-0에서 <b>${x.p.toFixed(0)}%</b> · ${fmt(x.n)}구 중`) +
+    card("2스트라이크 이후", two, (x) => `<b>${x.p.toFixed(0)}%</b>` + (behind ? ` · 불리할 땐 ${esc(D.types[behind.t])} ${behind.p.toFixed(0)}%` : ""));
+}
+
+/* ---------- 표 ---------- */
 function renderMix(agg) {
   const total = sel.length;
   const rows = agg.by.map((a, t) => ({ t, ...a })).filter((r) => r.n > 0).sort((a, b) => b.n - a.n);
   const maxShare = rows.length ? rows[0].n / total : 1;
   $("mix").innerHTML = `<thead><tr><th>구종</th><th>투구 수</th><th>비율</th><th>평균</th><th>최고</th><th>S%</th><th>헛스윙%</th></tr></thead><tbody>` +
-    (rows.length ? rows.map((r) => {
-      const share = pct(r.n, total);
-      return `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>
+    (rows.length ? rows.map((r) => `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>
         <td>${fmt(r.n)}</td>
-        <td><span class="bar" style="width:${Math.max(2, 44 * (r.n / total) / maxShare)}px"></span>${share.toFixed(1)}%</td>
+        <td><span class="bar" style="width:${Math.max(3, 48 * (r.n / total) / maxShare)}px;background:${colors[r.t]}"></span>${pct(r.n, total).toFixed(1)}%</td>
         <td>${r.vN ? (r.vSum / r.vN).toFixed(1) : "–"}</td><td>${r.vMax || "–"}</td>
-        <td>${pct(r.strike, r.n).toFixed(1)}%</td><td>${r.swing ? pct(r.whiff, r.swing).toFixed(1) + "%" : "–"}</td></tr>`;
-    }).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">조건에 맞는 투구가 없습니다. 필터를 줄여 보세요.</td></tr>`) + "</tbody>";
+        <td>${pct(r.strike, r.n).toFixed(1)}%</td><td>${r.swing ? pct(r.whiff, r.swing).toFixed(1) + "%" : "–"}</td></tr>`).join("")
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;font-family:var(--font-body)">조건에 맞는 투구가 없습니다. 걸린 조건을 하나 지워 보세요.</td></tr>`) + "</tbody>";
 }
-
 function renderFinish(agg) {
-  const idx = (names) => names.map((n) => D.pa_results.indexOf(n));
-  const K = idx(["삼진"]), BB = idx(["볼넷", "고의4구", "사구"]), H = idx(["1루타", "2루타", "3루타", "홈런"]);
-  const XB = idx(["2루타", "3루타", "홈런"]), NOAB = idx(["볼넷", "고의4구", "사구", "희생번트", "희생플라이"]);
-  const sum = (arr, ids) => ids.reduce((a, i) => a + arr[i], 0);
-  const line = (arr) => {
-    const pa = arr.reduce((a, v) => a + v, 0), ab = pa - sum(arr, NOAB), h = sum(arr, H);
-    return { pa, k: sum(arr, K), bb: sum(arr, BB), h, xb: sum(arr, XB), ab };
-  };
   const total = new Uint32Array(D.pa_results.length);
-  const rows = agg.fin.map((arr, t) => { arr.forEach((v, j) => total[j] += v); return { t, ...line(arr) }; })
+  const rows = agg.fin.map((arr, t) => { arr.forEach((v, j) => total[j] += v); return { t, ...finLine(arr) }; })
     .filter((r) => r.pa > 0).sort((a, b) => b.pa - a.pa);
-  const avg = (r) => r.ab ? (r.h / r.ab).toFixed(3).replace(/^0/, "") : "–";
-  const cells = (r) => `<td>${fmt(r.pa)}</td><td>${pct(r.k, r.pa).toFixed(1)}%</td><td>${pct(r.bb, r.pa).toFixed(1)}%</td><td>${fmt(r.h)}</td><td>${fmt(r.xb)}</td><td>${avg(r)}</td>`;
-  const tot = line(total);
+  const cells = (r) => `<td>${fmt(r.pa)}</td><td>${pct(r.k, r.pa).toFixed(1)}%</td><td>${pct(r.bb, r.pa).toFixed(1)}%</td><td>${fmt(r.h)}</td><td>${fmt(r.xb)}</td><td>${avgStr(r.h, r.ab)}</td>`;
   $("fin").innerHTML = `<thead><tr><th>구종</th><th>타석</th><th>삼진%</th><th>볼넷%</th><th>안타</th><th>장타</th><th>피안타율</th></tr></thead><tbody>` +
     (rows.length ? rows.map((r) => `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>${cells(r)}</tr>`).join("") +
-      `<tr class="total"><td>합계</td>${cells(tot)}</tr>`
-      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">조건에 맞는 타석이 없습니다.</td></tr>`) + "</tbody>";
+      `<tr class="total"><td>합계</td>${cells(finLine(total))}</tr>`
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;font-family:var(--font-body)">조건에 맞는 타석이 없습니다.</td></tr>`) + "</tbody>";
 }
-
 function renderCounts(agg) {
-  const groups = [["0볼", [0]], ["1볼", [1]], ["2볼", [2]], ["3볼", [3]]];
   let html = "";
-  for (const [label, bs] of groups) {
-    const rows = COUNTS.map(([b, s], ci) => ({ b, s, ci })).filter((r) => bs.includes(r.b));
-    html += `<div class="cgroup">${label}</div>`;
-    for (const r of rows) {
-      const arr = agg.byCount[r.ci];
+  for (let b = 0; b <= 3; b++) {
+    html += `<div class="cgroup">${b}볼</div>`;
+    for (let s = 0; s <= 2; s++) {
+      const arr = agg.byCount[b * 3 + s];
       let n = 0; for (const v of arr) n += v;
-      const segs = [...arr].map((v, t) => ({ v, t })).filter((x) => x.v > 0).sort((a, b) => a.t - b.t);
-      html += `<div class="crow"><div class="lab">${r.b}-${r.s}</div>
+      const segs = [...arr].map((v, t) => ({ v, t })).filter((x) => x.v > 0);
+      html += `<div class="crow"><div class="lab">${b}-${s}</div>
         <div class="stack${n ? "" : " empty"}">${segs.map((x) => {
           const p = pct(x.v, n);
-          return `<div class="seg2" style="flex-grow:${x.v};background:${colors[x.t]}" data-tip="${esc(D.types[x.t])}|${x.v}|${p.toFixed(1)}|${r.b}-${r.s}">${p >= 12 ? Math.round(p) + "%" : ""}</div>`;
+          return `<div class="seg2" style="flex-grow:${x.v};background:${colors[x.t]}" data-tip="${esc(D.types[x.t])} · ${b}-${s} 카운트|${fmt(x.v)}구 · ${p.toFixed(1)}%">${p >= 12 ? Math.round(p) + "%" : ""}</div>`;
         }).join("")}</div>
         <div class="n">${n ? fmt(n) + "구" : "–"}</div></div>`;
     }
   }
   $("counts").innerHTML = html;
 }
-
 function renderLegend(agg) {
-  const present = agg.by.map((a, t) => ({ t, n: a.n })).filter((x) => x.n > 0);
+  const present = agg.by.map((a, t) => ({ t, n: a.n })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
   $("legend").innerHTML = present.map((x) => `<button type="button" class="chip" data-t="${x.t}" aria-pressed="${!state.hidden.has(x.t)}"><span class="dot" style="background:${colors[x.t]}"></span>${esc(D.types[x.t])}<em>${fmt(x.n)}</em></button>`).join("");
 }
 
-/* ---------- 스트라이크존 캔버스 ---------- */
+/* ---------- 스트라이크존 ---------- */
 const XR = [-2.5, 2.5], ZR = [-0.2, 5.2];
-let zoneCtx, zoneW = 0, zoneH = 0, zonePts = [];
+let zoneCtx, zoneW = 0, zoneH = 0, zonePts = [], zoneAnim = 0;
 function setupZone() {
   const box = $("zonebox"), cv = $("zone");
   zoneCtx = cv.getContext("2d");
-  const ro = new ResizeObserver(() => {
+  new ResizeObserver(() => {
     const r = box.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
     zoneW = r.width; zoneH = r.height;
     cv.width = Math.round(zoneW * dpr); cv.height = Math.round(zoneH * dpr);
     zoneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawZone();
-  });
-  ro.observe(box);
+  }).observe(box);
   cv.addEventListener("mousemove", zoneHover);
   cv.addEventListener("mouseleave", hideTip);
   $("legend").addEventListener("click", (e) => {
@@ -588,25 +845,34 @@ function setupZone() {
 const sx = (x) => (x - XR[0]) / (XR[1] - XR[0]) * zoneW;
 const sz = (z) => zoneH - (z - ZR[0]) / (ZR[1] - ZR[0]) * zoneH;
 
-function drawZone() {
+// 필터가 바뀌면 점이 존 중심에서 제자리로 퍼지며 나타난다.
+function animateZone() {
+  cancelAnimationFrame(zoneAnim);
+  if (REDUCED) return drawZone();
+  const start = performance.now(), dur = 520;
+  const step = (now) => {
+    const k = Math.min(1, (now - start) / dur);
+    drawZone(1 - Math.pow(1 - k, 3));
+    if (k < 1) zoneAnim = requestAnimationFrame(step);
+  };
+  zoneAnim = requestAnimationFrame(step);
+}
+function drawZone(progress = 1) {
   if (!zoneCtx || !zoneW) return;
   const ctx = zoneCtx, cs = getComputedStyle(document.documentElement);
   const ink = cs.getPropertyValue("--zone").trim(), faint = cs.getPropertyValue("--line").trim(), surface = cs.getPropertyValue("--surface").trim(), muted = cs.getPropertyValue("--muted").trim();
   ctx.clearRect(0, 0, zoneW, zoneH);
   const [zb, zt] = D.meta.zone, hw = 17 / 24;
-  // 존 9분할 보조선
   ctx.strokeStyle = faint; ctx.lineWidth = 1;
   for (let k = 1; k < 3; k++) {
     const x = -hw + (2 * hw) * k / 3, z = zb + (zt - zb) * k / 3;
     ctx.beginPath(); ctx.moveTo(sx(x), sz(zb)); ctx.lineTo(sx(x), sz(zt)); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx(-hw), sz(z)); ctx.lineTo(sx(hw), sz(z)); ctx.stroke();
   }
-  // 홈플레이트 (포수 시점)
   const py = sz(0.05);
   ctx.fillStyle = faint;
   ctx.beginPath(); ctx.moveTo(sx(-hw), py); ctx.lineTo(sx(hw), py); ctx.lineTo(sx(hw), py + 5); ctx.lineTo(sx(0), py + 12); ctx.lineTo(sx(-hw), py + 5); ctx.closePath(); ctx.fill();
 
-  // 투구 점
   const pts = [];
   for (const i of sel) {
     if (X[i] === -32768 || Z[i] === -32768 || state.hidden.has(T[i])) continue;
@@ -614,22 +880,21 @@ function drawZone() {
   }
   zonePts = pts;
   const many = pts.length > 4000;
-  const r = pts.length > 20000 ? 2 : pts.length > 4000 ? 2.6 : 4.2;
-  ctx.globalAlpha = pts.length > 20000 ? 0.28 : pts.length > 4000 ? 0.5 : 0.85;
+  const r = pts.length > 20000 ? 2 : pts.length > 4000 ? 2.6 : 4.4;
+  const cx = sx(0), cz = sz((zb + zt) / 2);
+  ctx.globalAlpha = (pts.length > 20000 ? 0.28 : pts.length > 4000 ? 0.5 : 0.85) * progress;
   for (const i of pts) {
-    const x = sx(X[i] / 100), y = sz(Z[i] / 100);
+    const x = cx + (sx(X[i] / 100) - cx) * progress, y = cz + (sz(Z[i] / 100) - cz) * progress;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = colors[T[i]]; ctx.fill();
     if (!many) { ctx.lineWidth = 1; ctx.strokeStyle = surface; ctx.stroke(); }
   }
   ctx.globalAlpha = 1;
-  // 스트라이크존 외곽은 점 위에
   ctx.strokeStyle = ink; ctx.lineWidth = 2;
   ctx.strokeRect(sx(-hw), sz(zt), sx(hw) - sx(-hw), sz(zb) - sz(zt));
-  ctx.fillStyle = muted; ctx.font = "11px " + getComputedStyle(document.body).fontFamily;
-  ctx.textAlign = "left"; ctx.fillText(`${fmt(pts.length)}구 표시`, 6, 14);
+  ctx.fillStyle = muted; ctx.font = "12px " + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = "left"; ctx.fillText(`${fmt(pts.length)}구`, 6, 16);
 }
-
 function zoneHover(e) {
   const rect = e.currentTarget.getBoundingClientRect();
   const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -661,8 +926,8 @@ function hideTip() { tip.hidden = true; }
 document.addEventListener("mouseover", (e) => {
   const seg = e.target.closest && e.target.closest("[data-tip]");
   if (!seg) return;
-  const [t, v, p, c] = seg.dataset.tip.split("|");
-  const move = (ev) => showTip(ev.clientX, ev.clientY, `<b>${esc(t)}</b> · ${c} 카운트<br><span class="m">${fmt(+v)}구 · ${p}%</span>`);
+  const [title, line] = seg.dataset.tip.split("|");
+  const move = (ev) => showTip(ev.clientX, ev.clientY, `<b>${esc(title)}</b><br><span class="m">${esc(line)}</span>`);
   move(e);
   seg.addEventListener("mousemove", move);
   seg.addEventListener("mouseleave", () => { seg.removeEventListener("mousemove", move); hideTip(); }, { once: true });
@@ -1046,10 +1311,53 @@ function moveHover(e) {
   showTip(e.clientX, e.clientY, `<b>${esc(D.types[best.t])}</b> 평균 · ${fmt(best.n)}구<br><span class="m">수평 ${best.h.toFixed(1)}cm · 수직 ${best.v.toFixed(1)}cm<br>${best.kmh.toFixed(1)}km/h</span>`);
 }
 
-function update() {
+/* ---------- 탭 ---------- */
+const TABS = ["overview", "trajectory", "tunnel", "counts"];
+let currentTab = "overview", trajAutoPlayed = false;
+function panelOf(tab) { return $(tab === "counts" ? "counts-tab" : tab); }
+function moveInk() {
+  const btn = $("tab-" + currentTab), ink = $("tab-ink");
+  if (!btn) return;
+  ink.style.width = btn.offsetWidth + "px";
+  ink.style.transform = `translateX(${btn.offsetLeft}px)`;
+}
+function showTab(tab, focus) {
+  if (!TABS.includes(tab)) tab = "overview";
+  currentTab = tab;
+  for (const t of TABS) {
+    const on = t === tab, btn = $("tab-" + t), panel = panelOf(t);
+    btn.setAttribute("aria-selected", String(on)); btn.tabIndex = on ? 0 : -1;
+    if (on && panel.hidden) { panel.hidden = false; panel.classList.remove("enter"); void panel.offsetWidth; panel.classList.add("enter"); }
+    else if (!on) panel.hidden = true;
+  }
+  if (focus) $("tab-" + tab).focus();
+  moveInk();
+  try { history.replaceState(null, "", "#" + tab); } catch (_) { /* 미리보기 등에서는 무시 */ }
+  // 궤적 탭에 처음 들어오면 한 번 재생해서 무엇을 하는 화면인지 보여준다.
+  if (tab === "trajectory" && !trajAutoPlayed && !REDUCED) {
+    trajAutoPlayed = true;
+    const team = trajTeam();
+    if (team >= 0) ensureTraj(team).then(() => setTimeout(playTraj, 450));
+  }
+}
+function bindTabs() {
+  $("tablist").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) showTab(b.dataset.tab); });
+  $("tablist").addEventListener("keydown", (e) => {
+    const k = TABS.indexOf(currentTab);
+    if (e.key === "ArrowRight") showTab(TABS[(k + 1) % TABS.length], true);
+    else if (e.key === "ArrowLeft") showTab(TABS[(k + TABS.length - 1) % TABS.length], true);
+  });
+  window.addEventListener("resize", moveInk);
+  window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+}
+
+function update(pitcherChanged) {
+  if (pitcherChanged) { tunBase = null; tunComp = null; }
   filter();
   const agg = aggregate();
-  renderStatline(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg); drawZone();
+  syncControls();
+  renderHero(agg); renderInsights(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg);
+  animateZone();
   drawMove(); refreshTraj();
 }
 
@@ -1060,14 +1368,19 @@ new MutationObserver(onTheme).observe(document.documentElement, { attributes: tr
 fetch("pitches.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((data) => {
   decode(data);
   readColors();
-  $("season").textContent = `${data.dates[0]} ~ ${data.dates[data.dates.length - 1]} · ${fmt(data.meta.games)}경기 · ${fmt(N)}구`;
+  shell();
+  $("season").textContent = `${data.dates[0].slice(5).replace("-", ".")}~${data.dates[data.dates.length - 1].slice(5).replace("-", ".")} · ${fmt(data.meta.games)}경기 · ${fmt(N)}구`;
   fillTeams(); fillCounts(); fillMonths();
   // 첫 화면: 가장 많이 던진 투수
   let top = 0; for (let i = 1; i < pitchCount.length; i++) if (pitchCount[i] > pitchCount[top]) top = i;
   state.pitcher = String(top);
-  shell(); bindControls(); syncControls(); update();
+  setupZone(); setupTrajMove();
+  bindCombo(); bindFilters(); bindTabs();
+  update(true);
+  showTab(location.hash.slice(1) || "overview");
+  requestAnimationFrame(moveInk);
 }).catch((err) => {
-  $("main").innerHTML = `<div class="state">투구 데이터(pitches.json)를 불러오지 못했습니다 (${esc(err.message)}). 같은 폴더에서 <code>python -m http.server</code>로 열어 주세요.</div>`;
+  $("app").innerHTML = `<div class="loading"><div><b style="color:var(--ink)">투구 데이터(pitches.json)를 불러오지 못했습니다</b><br>${esc(err.message)} · 같은 폴더에서 <code>python -m http.server</code>로 열어 주세요.</div></div>`;
 });
 })();
 </script>
