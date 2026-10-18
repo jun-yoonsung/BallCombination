@@ -92,6 +92,13 @@ main { display: grid; gap: 20px; min-width: 0; }
 .canvas-box { position: relative; width: 100%; aspect-ratio: 4 / 3; max-width: 100%; }
 .canvas-box canvas { width: 100%; height: 100%; display: block; }
 .mini { margin-top: 10px; }
+.play { display: flex; gap: 6px; align-items: stretch; }
+.playbtn { font: inherit; font-size: 12px; font-weight: 600; color: var(--surface); background: var(--accent); border: 0; border-radius: 6px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+.playbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tun-base { min-width: 140px; }
+#tuntable tbody tr { cursor: pointer; }
+#tuntable tbody tr[aria-selected="true"] td { background: var(--accent-soft); }
+#tuntable tbody tr:hover td { background: var(--bg); }
 .stackcol { display: grid; gap: 20px; align-content: start; min-width: 0; }
 .row2 { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 1060px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
@@ -434,6 +441,13 @@ function shell() {
               <button type="button" data-v="avg" aria-pressed="true">구종 평균</button>
               <button type="button" data-v="each" aria-pressed="false">개별 투구</button>
             </div>
+            <div class="play">
+              <button type="button" class="playbtn" id="traj-play">▶ 재생</button>
+              <div class="seg" id="traj-speed" role="group" aria-label="재생 속도">
+                <button type="button" data-v="1" aria-pressed="false">실제 속도</button>
+                <button type="button" data-v="0.25" aria-pressed="true">1/4 속도</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="canvas-box" id="trajbox"><canvas id="traj" role="img" aria-label="구종별 투구 궤적"></canvas></div>
@@ -445,6 +459,18 @@ function shell() {
         <div class="tablewrap mini"><table id="movetable"></table></div>
       </section>
     </div>
+    <section class="panel" aria-labelledby="h-tun">
+      <div class="phead">
+        <div><h2 id="h-tun">터널링</h2>
+        <p class="sub">두 구종이 언제까지 같은 길로 오다가 갈라지는지. 타자 판단 시점은 홈 도착 0.167초 전(홈에서 약 7m)으로, 이때 가까울수록 타자가 구종을 구분하기 어렵습니다. 갈라짐 배율 = 홈 도착 차이 ÷ 판단 시점 차이로, 클수록 늦게 갈라져 타자를 속이기 좋습니다. 표에서 구종을 누르면 그림에 겹쳐 그립니다.</p></div>
+        <div class="field tun-base"><label for="tun-base">기준 구종</label><select id="tun-base"></select></div>
+      </div>
+      <div class="row3">
+        <div class="canvas-box" id="tunbox"><canvas id="tun" role="img" aria-label="두 구종의 궤적 비교 (포수 시점)"></canvas></div>
+        <div class="canvas-box" id="sepbox"><canvas id="sep" role="img" aria-label="시간에 따른 두 구종 사이 거리"></canvas></div>
+      </div>
+      <div class="tablewrap mini"><table id="tuntable"></table></div>
+    </section>
     <section class="panel" aria-labelledby="h-count">
       <h2 id="h-count">카운트별 볼배합</h2>
       <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
@@ -648,7 +674,9 @@ const TK = ["x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az"];
 const Y0 = 50, Y_PLATE = 17 / 12, Y_RELEASE = 54.5, Y_RUBBER = 60.5;
 let TR = null;  // Float32Array(N * 8), 아직 안 불러온 투구는 NaN
 const trajLoaded = new Map();
-let trajView = "catcher", trajMode = "avg", trajStatus = "";
+let trajView = "catcher", trajMode = "avg", trajStatus = "", trajSpeed = 0.25, anim = null;
+let tunBase = null, tunComp = null, tunCtx, tunW = 0, tunH = 0, sepCtx, sepW = 0, sepH = 0;
+const DECISION = 0.167;  // 타자 판단 시점: 홈 도착 0.167초 전
 let trajCtx, trajW = 0, trajH = 0, moveCtx, moveW = 0, moveH = 0, moveMeans = [];
 
 function setupCanvas(boxId, canvasId, onSize) {
@@ -663,14 +691,22 @@ function setupCanvas(boxId, canvasId, onSize) {
 function setupTrajMove() {
   setupCanvas("trajbox", "traj", (ctx, w, h) => { trajCtx = ctx; trajW = w; trajH = h; drawTraj(); });
   setupCanvas("movebox", "move", (ctx, w, h) => { moveCtx = ctx; moveW = w; moveH = h; drawMove(); });
-  for (const [id, set] of [["traj-view", (v) => trajView = v], ["traj-mode", (v) => trajMode = v]]) {
+  for (const [id, set] of [["traj-view", (v) => trajView = v], ["traj-mode", (v) => trajMode = v], ["traj-speed", (v) => trajSpeed = +v]]) {
     $(id).addEventListener("click", (e) => {
       const b = e.target.closest("button"); if (!b) return;
       set(b.dataset.v);
       for (const x of $(id).querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
-      drawTraj();
+      if (id === "traj-speed") playTraj(); else { stopAnim(); drawTraj(); }
     });
   }
+  $("traj-play").addEventListener("click", playTraj);
+  setupCanvas("tunbox", "tun", (ctx, w, h) => { tunCtx = ctx; tunW = w; tunH = h; drawTunnel(); });
+  setupCanvas("sepbox", "sep", (ctx, w, h) => { sepCtx = ctx; sepW = w; sepH = h; drawTunnel(); });
+  $("tun-base").addEventListener("change", (e) => { tunBase = +e.target.value; tunComp = null; drawTunnel(); });
+  $("tuntable").addEventListener("click", (e) => {
+    const tr = e.target.closest("tr[data-t]"); if (!tr) return;
+    tunComp = +tr.dataset.t; drawTunnel();
+  });
   $("move").addEventListener("mousemove", moveHover);
   $("move").addEventListener("mouseleave", hideTip);
 }
@@ -691,23 +727,52 @@ function ensureTraj(team) {
   return trajLoaded.get(team);
 }
 function refreshTraj() {
+  stopAnim();
   const team = trajTeam();
-  if (team < 0) { trajStatus = "팀이나 투수를 고르면 궤적을 그립니다."; return drawTraj(); }
-  trajStatus = "궤적 데이터를 불러오는 중…"; drawTraj();
-  ensureTraj(team).then(() => { trajStatus = ""; drawTraj(); }, () => { trajStatus = "궤적 데이터를 불러오지 못했습니다."; drawTraj(); });
+  const redraw = () => { drawTraj(); drawTunnel(); };
+  if (team < 0) { trajStatus = "팀이나 투수를 고르면 궤적을 그립니다."; return redraw(); }
+  trajStatus = "궤적 데이터를 불러오는 중…"; redraw();
+  ensureTraj(team).then(() => { trajStatus = ""; redraw(); }, () => { trajStatus = "궤적 데이터를 불러오지 못했습니다."; redraw(); });
 }
+
+/* 재생: 릴리스 이후 경과 시간(초)만큼만 궤적을 그린다. 구종마다 실제 비행 시간대로 도착한다. */
+function stopAnim() { if (anim) { cancelAnimationFrame(anim); anim = null; } }
+function playTraj() {
+  stopAnim();
+  if (trajStatus) return;
+  const start = performance.now();
+  const step = (now) => {
+    const tNow = (now - start) / 1000 * trajSpeed;
+    if (tNow < 0.7) { drawTraj(tNow); anim = requestAnimationFrame(step); }
+    else { anim = null; drawTraj(); }
+  };
+  anim = requestAnimationFrame(step);
+}
+
+/* 선택된 투구로 구종별 평균 궤적 파라미터를 구한다. */
+function typeMeans(respectHidden) {
+  const p = new Float32Array(8), nt = D.types.length;
+  const sums = Array.from({ length: nt }, () => new Float64Array(9));
+  for (const i of sel) {
+    const t = T[i];
+    if ((respectHidden && state.hidden.has(t)) || !trajParams(i, p)) continue;
+    const s = sums[t]; for (let j = 0; j < 8; j++) s[j] += p[j]; s[8]++;
+  }
+  return sums.map((s, t) => ({ t, n: s[8], m: s[8] ? Array.from(s.slice(0, 8), (v) => v / s[8]) : null }));
+}
+function posAt(m, t) { return [m[0] + m[2] * t + m[5] * t * t / 2, Y0 + m[3] * t + m[6] * t * t / 2, m[1] + m[4] * t + m[7] * t * t / 2]; }
 
 function tAtY(p, y) {
   const a = p[6] / 2, b = p[3], c = Y0 - y, disc = b * b - 4 * a * c;
   if (disc < 0 || a === 0) return null;
   return (-b - Math.sqrt(disc)) / (2 * a);
 }
-function pathOf(p, steps) {
+function pathOf(p, steps, tNow = Infinity) {
   const t0 = tAtY(p, Y_RELEASE), t1 = tAtY(p, Y_PLATE);
   if (t0 == null || t1 == null) return null;
-  const pts = [];
+  const tEnd = Math.min(t1, t0 + tNow), pts = [];
   for (let k = 0; k <= steps; k++) {
-    const t = t0 + (t1 - t0) * k / steps;
+    const t = t0 + (tEnd - t0) * k / steps;
     pts.push([p[0] + p[2] * t + p[5] * t * t / 2, Y0 + p[3] * t + p[6] * t * t / 2, p[1] + p[4] * t + p[7] * t * t / 2]);
   }
   return pts;
@@ -730,8 +795,9 @@ function trajParams(i, out) {
   return true;
 }
 
-function drawTraj() {
+function drawTraj(tNow = Infinity) {
   if (!trajCtx || !trajW) return;
+  const playing = Number.isFinite(tNow);
   const ctx = trajCtx, w = trajW, h = trajH, cs = getComputedStyle(document.documentElement);
   const tok = (n) => cs.getPropertyValue(n).trim();
   const line = tok("--line"), muted = tok("--muted"), ink = tok("--zone"), surface = tok("--surface");
@@ -776,28 +842,33 @@ function drawTraj() {
     const s = sums[t]; for (let j = 0; j < 8; j++) s[j] += p[j]; s[8]++;
     each.push(i);
   }
-  const shown = each.length, stride = Math.max(1, Math.ceil(shown / 300));
+  const shown = each.length, stride = Math.max(1, Math.ceil(shown / (playing ? 40 : 300)));
   ctx.lineCap = "round"; ctx.lineJoin = "round";
   if (trajMode === "each") {
     ctx.lineWidth = 1; ctx.globalAlpha = shown > 100 ? 0.35 : 0.6;
     for (let k = 0; k < shown; k += stride) {
       const i = each[k]; trajParams(i, p);
-      const pts = pathOf(p, 16); if (!pts) continue;
+      const pts = pathOf(p, 16, tNow); if (!pts) continue;
       ctx.strokeStyle = colors[T[i]]; poly(pts); ctx.stroke();
+      if (playing) {
+        const [bx, by] = pr(pts[pts.length - 1]);
+        ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fillStyle = colors[T[i]]; ctx.fill();
+        ctx.globalAlpha = shown > 100 ? 0.35 : 0.6;
+      }
     }
     ctx.globalAlpha = 1;
   } else {
     const order = sums.map((s, t) => ({ t, n: s[8] })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
     for (const { t, n } of order) {
       const m = Array.from(sums[t].slice(0, 8), (v) => v / n);
-      const pts = pathOf(m, 32); if (!pts) continue;
+      const pts = pathOf(m, 32, tNow); if (!pts) continue;
       // 측정 시작(50ft) 이전 추정 구간은 점선
       const cut = pts.findIndex((q) => q[1] <= Y0);
       ctx.strokeStyle = colors[t]; ctx.lineWidth = 3;
-      ctx.setLineDash([3, 4]); poly(pts.slice(0, cut + 1)); ctx.stroke(); ctx.setLineDash([]);
-      poly(pts.slice(cut)); ctx.stroke();
+      ctx.setLineDash([3, 4]); poly(cut < 0 ? pts : pts.slice(0, cut + 1)); ctx.stroke(); ctx.setLineDash([]);
+      if (cut >= 0) { poly(pts.slice(cut)); ctx.stroke(); }
       const [ex, ey] = pr(pts[pts.length - 1]);
-      ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fillStyle = colors[t]; ctx.fill();
+      ctx.beginPath(); ctx.arc(ex, ey, playing ? 6 : 5, 0, Math.PI * 2); ctx.fillStyle = colors[t]; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
     }
   }
@@ -808,9 +879,110 @@ function drawTraj() {
   else if (trajView === "side") { poly([[0, Y_PLATE, zb], [0, Y_PLATE, zt]]); ctx.lineWidth = 3; ctx.stroke(); }
   else { poly([[-hw, Y_PLATE, 0], [hw, Y_PLATE, 0]]); ctx.lineWidth = 3; ctx.stroke(); }
   ctx.fillStyle = muted; ctx.font = "11px " + font; ctx.textAlign = "right";
-  const label = trajMode === "each" ? `${fmt(Math.ceil(shown / stride))}구 표시` : `${fmt(shown)}구 평균`;
+  const label = (trajMode === "each" ? `${fmt(Math.ceil(shown / stride))}구 표시` : `${fmt(shown)}구 평균`)
+    + (playing ? ` · 릴리스 후 ${tNow.toFixed(3)}초` : "");
   ctx.fillText(label, w - 8, 16);
   if (trajView === "side") { ctx.textAlign = "left"; ctx.fillText("투수판", 6, 16); }
+}
+
+/* ---------- 터널링 ---------- */
+// 두 구종의 평균 궤적을 '홈 도착 전 같은 시간'에 맞춰 비교한다 (Baseball Prospectus의 터널링 방식).
+function tunnelStats(a, b) {
+  const ta = tAtY(a, Y_PLATE), tb = tAtY(b, Y_PLATE);
+  const ra = tAtY(a, Y_RELEASE), rb = tAtY(b, Y_RELEASE);
+  const gap = (pa, pb) => Math.hypot(pa[0] - pb[0], pa[2] - pb[2]) * 30.48;  // 포수 시점 평면 거리(cm)
+  const at = (tau) => gap(posAt(a, ta - tau), posAt(b, tb - tau));
+  const flight = Math.min(ta - ra, tb - rb);
+  const curve = [];
+  for (let k = 0; k <= 40; k++) { const tau = flight * (1 - k / 40); curve.push([tau, at(tau)]); }
+  const release = gap(posAt(a, ra), posAt(b, rb)), decision = at(DECISION), plate = at(0);
+  return { release, decision, plate, ratio: decision > 0 ? plate / decision : 0, curve, flight };
+}
+
+function fillTunnelBase(means) {
+  const present = means.filter((x) => x.n >= 10).sort((p, q) => q.n - p.n);
+  const ok = present.some((x) => x.t === tunBase);
+  if (!ok) tunBase = present.length ? present[0].t : null;
+  $("tun-base").innerHTML = present.map((x) => `<option value="${x.t}">${esc(D.types[x.t])} (${fmt(x.n)}구)</option>`).join("") || `<option>–</option>`;
+  if (tunBase != null) $("tun-base").value = String(tunBase);
+  return present;
+}
+
+function drawTunnel() {
+  if (!tunCtx || !tunW || !sepCtx || !sepW || !D) return;
+  const cs = getComputedStyle(document.documentElement), tok = (n) => cs.getPropertyValue(n).trim();
+  const line = tok("--line"), muted = tok("--muted"), ink = tok("--zone"), surface = tok("--surface"), accent = tok("--accent");
+  const font = getComputedStyle(document.body).fontFamily;
+  for (const [c, w, h] of [[tunCtx, tunW, tunH], [sepCtx, sepW, sepH]]) c.clearRect(0, 0, w, h);
+  const msg = (text) => {
+    for (const [c, w, h] of [[tunCtx, tunW, tunH], [sepCtx, sepW, sepH]]) { c.fillStyle = muted; c.font = "13px " + font; c.textAlign = "center"; c.fillText(text, w / 2, h / 2); }
+    $("tuntable").innerHTML = "";
+  };
+  if (trajStatus) return msg(trajStatus);
+  const means = typeMeans(false);
+  const present = fillTunnelBase(means);
+  if (tunBase == null || present.length < 2) return msg("비교하려면 10구 이상 던진 구종이 2개 이상 필요합니다.");
+  const base = means[tunBase];
+  const rows = present.filter((x) => x.t !== tunBase).map((x) => ({ t: x.t, n: x.n, ...tunnelStats(base.m, x.m) }));
+  if (!rows.some((r) => r.t === tunComp)) tunComp = rows[0].t;
+  const comp = means[tunComp], cur = rows.find((r) => r.t === tunComp);
+
+  // 표
+  $("tuntable").innerHTML = `<thead><tr><th>비교 구종</th><th>투구 수</th><th>릴리스 차이</th><th>판단 시점 차이</th><th>홈 도착 차이</th><th>갈라짐 배율</th></tr></thead><tbody>` +
+    rows.map((r) => `<tr data-t="${r.t}" aria-selected="${r.t === tunComp}"><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td><td>${fmt(r.n)}</td><td>${r.release.toFixed(1)}cm</td><td>${r.decision.toFixed(1)}cm</td><td>${r.plate.toFixed(1)}cm</td><td>${r.ratio.toFixed(1)}배</td></tr>`).join("") + "</tbody>";
+
+  // 왼쪽: 포수 시점에 두 궤적 + 판단 시점·홈 도착 위치
+  {
+    const ctx = tunCtx, w = tunW, h = tunH, pr = projector("catcher", w, h);
+    const poly = (pts) => { ctx.beginPath(); pts.forEach((q, k) => { const [a, b] = pr(q); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); };
+    const [zb, zt] = D.meta.zone, hw = 17 / 24;
+    ctx.lineCap = "round";
+    for (const x of [base, comp]) {
+      const pts = pathOf(x.m, 40); if (!pts) continue;
+      ctx.strokeStyle = colors[x.t]; ctx.lineWidth = 3; poly(pts); ctx.stroke();
+    }
+    ctx.strokeStyle = ink; ctx.lineWidth = 1.5; poly([[-hw, Y_PLATE, zb], [hw, Y_PLATE, zb], [hw, Y_PLATE, zt], [-hw, Y_PLATE, zt], [-hw, Y_PLATE, zb]]); ctx.stroke();
+    const mark = (tau, label) => {
+      const pa = posAt(base.m, tAtY(base.m, Y_PLATE) - tau), pb = posAt(comp.m, tAtY(comp.m, Y_PLATE) - tau);
+      const [ax, ay] = pr(pa), [bx, by] = pr(pb);
+      ctx.strokeStyle = muted; ctx.lineWidth = 1; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+      for (const [x, y, c] of [[ax, ay, colors[base.t]], [bx, by, colors[comp.t]]]) { ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke(); }
+      ctx.fillStyle = muted; ctx.font = "11px " + font; ctx.textAlign = "left"; ctx.fillText(label, Math.max(ax, bx) + 9, (ay + by) / 2 + 4);
+    };
+    mark(DECISION, `판단 시점 ${cur.decision.toFixed(0)}cm`);
+    mark(0, `홈 도착 ${cur.plate.toFixed(0)}cm`);
+    ctx.font = "600 12px " + font; ctx.textAlign = "left";
+    ctx.fillStyle = colors[base.t]; ctx.fillText("● " + D.types[base.t], 8, 18);
+    ctx.fillStyle = colors[comp.t]; ctx.fillText("● " + D.types[comp.t], 8, 36);
+  }
+
+  // 오른쪽: 홈 도착 전 시간에 따른 거리
+  {
+    const ctx = sepCtx, w = sepW, h = sepH, padL = 44, padR = 16, padT = 16, padB = 34;
+    const tMax = Math.max(...rows.map((r) => r.flight)), yMax = Math.max(40, Math.ceil(Math.max(...rows.map((r) => r.plate)) / 20) * 20);
+    const X = (tau) => padL + (tMax - tau) / tMax * (w - padL - padR);
+    const Y = (v) => h - padB - v / yMax * (h - padT - padB);
+    ctx.font = "11px " + font; ctx.fillStyle = muted; ctx.strokeStyle = line; ctx.lineWidth = 1;
+    ctx.textAlign = "right";
+    for (let v = 0; v <= yMax; v += yMax > 80 ? 40 : 20) { ctx.globalAlpha = v ? 0.6 : 1; ctx.beginPath(); ctx.moveTo(padL, Y(v)); ctx.lineTo(w - padR, Y(v)); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillText(`${v}cm`, padL - 6, Y(v) + 4); }
+    ctx.textAlign = "center";
+    for (let tau = 0; tau <= tMax + 1e-9; tau += 0.1) ctx.fillText(tau ? `${tau.toFixed(1)}초 전` : "홈 도착", X(tau), h - padB + 16);
+    // 판단 시점
+    ctx.strokeStyle = accent; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(X(DECISION), padT); ctx.lineTo(X(DECISION), h - padB); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = accent; ctx.textAlign = "right"; ctx.fillText("타자 판단 시점", X(DECISION) - 6, padT + 10);
+    // 구종별 선: 선택한 비교 구종을 진하게
+    const ordered = [...rows].sort((a, b) => (a.t === tunComp) - (b.t === tunComp));
+    for (const r of ordered) {
+      const active = r.t === tunComp;
+      ctx.globalAlpha = active ? 1 : 0.35; ctx.strokeStyle = colors[r.t]; ctx.lineWidth = active ? 3 : 2; ctx.lineJoin = "round";
+      ctx.beginPath(); r.curve.forEach(([tau, v], k) => k ? ctx.lineTo(X(tau), Y(v)) : ctx.moveTo(X(tau), Y(v))); ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (active) {
+        for (const [tau, v] of [[DECISION, r.decision], [0, r.plate]]) { ctx.beginPath(); ctx.arc(X(tau), Y(v), 4.5, 0, Math.PI * 2); ctx.fillStyle = colors[r.t]; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke(); }
+      }
+    }
+    ctx.fillStyle = muted; ctx.textAlign = "left"; ctx.fillText(`${D.types[tunBase]} 기준 거리`, padL + 4, padT + 10);
+  }
 }
 
 /* ---------- 무브먼트 ---------- */
