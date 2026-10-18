@@ -56,6 +56,7 @@ def main(argv=None):
     ap.add_argument("--game", action="append", default=[], help="gameId 직접 지정 (여러 번 가능)")
     ap.add_argument("--out", default="data/pitches.csv", help="출력 CSV 경로")
     ap.add_argument("--cache", default="data/raw", help="원본 JSON 캐시 디렉터리 ('' 이면 캐시 안 함)")
+    ap.add_argument("--all-rounds", action="store_true", help="시범경기·올스타전도 수집 (기본: 정규시즌+포스트시즌만)")
     ap.add_argument("--delay", type=float, default=0.7, help="요청 간 최소 간격(초)")
     args = ap.parse_args(argv)
 
@@ -69,7 +70,8 @@ def main(argv=None):
     if args.start:
         end = args.end or args.start
         for s, e in daterange_chunks(args.start, end):
-            found = parse_games(client.schedule(s.isoformat(), e.isoformat()))
+            found = parse_games(client.schedule(s.isoformat(), e.isoformat()),
+                                official_only=not args.all_rounds)
             log.info("%s ~ %s: 종료된 경기 %d개", s, e, len(found))
             games.extend(found)
 

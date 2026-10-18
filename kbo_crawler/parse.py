@@ -127,11 +127,18 @@ def parse_relay(data, game_id, inning, names=None):
     return rows
 
 
-def parse_games(schedule_data, finished_only=True):
-    """schedule 응답에서 경기 목록을 뽑는다."""
+def is_official_round(round_code):
+    """정규시즌(kbo_r) 또는 포스트시즌(kbo_ps_wd 와일드카드, kbo_ps_sp 준PO 등)."""
+    return round_code == "kbo_r" or str(round_code).startswith("kbo_ps")
+
+
+def parse_games(schedule_data, finished_only=True, official_only=True):
+    """schedule 응답에서 경기 목록을 뽑는다. 기본은 정규시즌 + 포스트시즌만 (시범경기, 올스타전 제외)."""
     games = []
     for g in _result(schedule_data).get("games") or []:
         if g.get("categoryId") not in (None, "kbo"):
+            continue
+        if official_only and not is_official_round(g.get("roundCode")):
             continue
         status = g.get("statusCode")
         if finished_only and (g.get("cancel") or status != "RESULT"):
@@ -144,7 +151,7 @@ def parse_games(schedule_data, finished_only=True):
             "away_score": g.get("awayTeamScore"),
             "home_score": g.get("homeTeamScore"),
             "stadium": g.get("stadium"),
-            # kbo_e 시범경기, kbo_r 정규시즌, 그 외 포스트시즌
+            # kbo_r 정규시즌, kbo_ps_* 포스트시즌, kbo_e 시범경기, kbo_as 올스타전
             "round_code": g.get("roundCode"),
             "status": status,
         })

@@ -48,12 +48,16 @@ class ParseRelayTest(unittest.TestCase):
 class ParseGamesTest(unittest.TestCase):
     def test_filters_unfinished_and_cancelled(self):
         data = {"result": {"games": [
-            {"gameId": "A", "categoryId": "kbo", "statusCode": "RESULT"},
-            {"gameId": "B", "categoryId": "kbo", "statusCode": "BEFORE"},
-            {"gameId": "C", "categoryId": "kbo", "statusCode": "RESULT", "cancel": True},
-            {"gameId": "D", "categoryId": "futures", "statusCode": "RESULT"},
+            {"gameId": "A", "categoryId": "kbo", "statusCode": "RESULT", "roundCode": "kbo_r"},
+            {"gameId": "B", "categoryId": "kbo", "statusCode": "BEFORE", "roundCode": "kbo_r"},
+            {"gameId": "C", "categoryId": "kbo", "statusCode": "RESULT", "cancel": True, "roundCode": "kbo_r"},
+            {"gameId": "D", "categoryId": "futures", "statusCode": "RESULT", "roundCode": "kbo_r"},
+            {"gameId": "E", "categoryId": "kbo", "statusCode": "RESULT", "roundCode": "kbo_e"},
+            {"gameId": "F", "categoryId": "kbo", "statusCode": "RESULT", "roundCode": "kbo_ps_wd"},
+            {"gameId": "G", "categoryId": "kbo", "statusCode": "RESULT", "roundCode": "kbo_as"},
         ]}}
-        self.assertEqual([g["game_id"] for g in parse_games(data)], ["A"])
+        self.assertEqual([g["game_id"] for g in parse_games(data)], ["A", "F"])
+        self.assertEqual([g["game_id"] for g in parse_games(data, official_only=False)], ["A", "E", "F", "G"])
 
 
 class FakeClient:

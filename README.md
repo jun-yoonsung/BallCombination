@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ## 사용법
 
 ```bash
-# 기간 지정: 해당 기간에 종료된 KBO 경기를 모두 수집
+# 기간 지정: 해당 기간에 종료된 KBO 정규시즌/포스트시즌 경기를 모두 수집
 python -m kbo_crawler.crawl --from 2025-09-01 --to 2025-09-07 --out data/pitches_0901_0907.csv
 
 # 경기 지정 (gameId는 네이버 경기 URL에 있는 값, 예: 20250920LGSS02025)
@@ -24,6 +24,7 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 | `--game` | | gameId 직접 지정, 여러 번 사용 가능 |
 | `--out` | `data/pitches.csv` | 출력 CSV (Excel에서 한글이 깨지지 않게 UTF-8 BOM으로 저장) |
 | `--cache` | `data/raw` | API 원본 JSON 캐시. 다시 실행하면 캐시를 재사용 |
+| `--all-rounds` | 꺼짐 | 시범경기·올스타전도 수집 (기본은 정규시즌 + 포스트시즌만) |
 | `--delay` | `0.7` | 요청 간 최소 간격(초) |
 
 ## 출력 컬럼
@@ -31,7 +32,7 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 | 컬럼 | 설명 |
 |---|---|
 | `game_id`, `game_date`, `stadium`, `away_team`, `home_team` | 경기 정보 |
-| `round_code` | `kbo_e` 시범경기, `kbo_r` 정규시즌, 그 외는 포스트시즌 |
+| `round_code` | `kbo_r` 정규시즌, `kbo_ps_*` 포스트시즌(`wd` 와일드카드, `sp` 준플레이오프 등) |
 | `inning`, `half` | 이닝, `top`(초) / `bottom`(말) |
 | `pitcher_id/name`, `batter_id/name`, `stance` | 투수, 타자, 타자 타석(L/R) |
 | `balls`, `strikes`, `outs` | 해당 투구 **후** 카운트 |
