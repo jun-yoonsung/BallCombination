@@ -82,6 +82,12 @@ class ParseRelayTest(unittest.TestCase):
     def test_plate_z_missing_trajectory(self):
         self.assertIsNone(plate_z({"crossPlateX": 0.1}))
 
+    def test_duplicate_relay_is_ignored(self):
+        data = json.loads(json.dumps(FIXTURE))
+        relays = data["result"]["textRelayData"]["textRelays"]
+        relays.append(json.loads(json.dumps(relays[0])))
+        self.assertEqual(len(parse_relay(data, "G", 1)), len(self.rows))
+
     def test_empty_response(self):
         self.assertEqual(parse_relay({}, "G1", 1), [])
         self.assertEqual(parse_relay({"result": {"textRelayData": None}}, "G1", 1), [])

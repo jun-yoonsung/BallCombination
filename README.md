@@ -86,3 +86,11 @@ python -m unittest -v
 python -m kbo_crawler.export_web "datasets/kbo_pitches/2026-*.csv" --out web/pitches.json
 cd web && python -m http.server 8000   # http://localhost:8000
 ```
+
+## 수집된 데이터 (2026 시즌)
+
+`datasets/kbo_pitches/2026-MM.csv` (월별), `web/pitches.json` (웹 탐색기용)
+
+- 2026-03-28 ~ 2026-10-17, 정규시즌 720경기 + 포스트시즌 2경기(와일드카드, 준플레이오프 1차전), 투구 222,128개
+- 투구 위치 좌표 누락 0.04%, 타석 결과 없음 0.2% (주루사로 이닝이 끝난 타석 등)
+- 네이버 원본 오류로 볼카운트가 비정상인 투구 7개(2026-05-13 NC-롯데 8~9회), 구종이 비어 있는 투구 1개가 있습니다

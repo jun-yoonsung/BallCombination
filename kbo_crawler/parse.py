@@ -133,11 +133,17 @@ def parse_relay(data, game_id, inning, names=None):
     """
     names = names if names is not None else player_names(data)
     relays = (_result(data).get("textRelayData") or {}).get("textRelays") or []
-    events = []
+    events, seen = [], set()
     for relay in relays:
         pts = {str(p.get("pitchId")): p for p in relay.get("ptsOptions") or []}
         for opt in relay.get("textOptions") or []:
-            events.append((opt.get("seqno") or 0, relay, opt, pts))
+            # 같은 타석이 응답에 두 번 들어오는 경우가 있어 seqno로 중복을 거른다
+            seq = opt.get("seqno")
+            if seq is not None:
+                if seq in seen:
+                    continue
+                seen.add(seq)
+            events.append((seq or 0, relay, opt, pts))
     events.sort(key=lambda e: e[0])
 
     rows = []
