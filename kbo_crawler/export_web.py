@@ -8,6 +8,7 @@
 - plate_x, plate_z는 1/100 ft 단위 정수.
 - plate_z는 타자마다 다른 스트라이크존을 리그 평균 존(1.6~3.3ft)에 맞춰 정규화한다.
 - sd는 투구 직전 점수차(투수팀 기준).
+- r은 타석 결과 인덱스*2 + 결정구 여부(1). 결과가 없는 타석은 null.
 - 카운트, 아웃, 주자, 타석, 결과, 포스트시즌 여부는 비트로 묶어 한 정수(s)에 담는다.
 """
 
@@ -21,6 +22,8 @@ from pathlib import Path
 
 ZONE_TOP, ZONE_BOT = 3.33, 1.61
 RESULTS = ["B", "T", "S", "F", "H", "W", "V"]
+PA_RESULTS = ["삼진", "볼넷", "고의4구", "사구", "1루타", "2루타", "3루타", "홈런", "땅볼", "플라이",
+              "라인드라이브", "병살타", "희생번트", "희생플라이", "실책출루", "야수선택", "번트아웃", "기타"]
 
 
 def _float(v):
@@ -52,7 +55,7 @@ def build(paths):
     teams, types, dates = Index(), Index(), Index()
     pitchers, batters = Index(), Index()
     pitcher_info, batter_info = {}, {}
-    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd")}
+    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd", "r")}
 
     rows = []
     for path in paths:
@@ -98,6 +101,8 @@ def build(paths):
         cols["s"].append(packed)
         cols["d"].append(dates(r["game_date"]))
         cols["sd"].append(_int(r["score_diff"], None))
+        pa = r.get("pa_result")
+        cols["r"].append(PA_RESULTS.index(pa) * 2 + _int(r.get("pa_last_pitch")) if pa in PA_RESULTS else None)
 
     # 구종은 많이 던진 순서로 정렬해서 인덱스를 다시 매긴다.
     freq = Counter(cols["t"])
@@ -116,6 +121,7 @@ def build(paths):
         "teams": teams.items,
         "types": [types.items[i] for i in order],
         "results": RESULTS,
+        "pa_results": PA_RESULTS,
         "dates": dates.items,
         "pitchers": [list(pitcher_info[i]) for i in range(len(pitchers.items))],
         "batters": [list(batter_info[i]) for i in range(len(batters.items))],

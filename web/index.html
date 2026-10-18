@@ -83,6 +83,7 @@ main { display: grid; gap: 20px; min-width: 0; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
 .panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
 .panel .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.stackcol { display: grid; gap: 20px; align-content: start; min-width: 0; }
 .row2 { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 1060px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
 
@@ -104,6 +105,7 @@ td .tname { display: inline-flex; align-items: center; gap: 8px; font-weight: 50
 td .tname i { width: 10px; height: 10px; border-radius: 50%; }
 .bar { display: inline-block; vertical-align: middle; height: 6px; border-radius: 3px; background: var(--faint); margin-right: 8px; opacity: 0.55; }
 tr:last-child td { border-bottom: 0; }
+tr.total td { font-weight: 600; border-top: 1px solid var(--line); }
 
 .counts { display: grid; gap: 4px; }
 .crow { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 10px; align-items: center; }
@@ -146,6 +148,25 @@ tr:last-child td { border-bottom: 0; }
         </div>
       </div>
       <div class="field"><label for="f-count">카운트</label><select id="f-count"></select></div>
+      <div class="field"><label id="l-scope">투구 범위</label>
+        <div class="seg" id="f-scope" role="group" aria-labelledby="l-scope">
+          <button type="button" data-v="all" aria-pressed="true">모든 공</button>
+          <button type="button" data-v="last" aria-pressed="false">결정구</button>
+        </div>
+      </div>
+      <div class="field"><label for="f-pa">타석 결과</label>
+        <select id="f-pa">
+          <option value="all">전체</option>
+          <option value="so">삼진</option>
+          <option value="bb">볼넷·사구</option>
+          <option value="hit">안타</option>
+          <option value="xbh">장타 (2루타·3루타·홈런)</option>
+          <option value="hr">홈런</option>
+          <option value="out">범타 (땅볼·플라이·직선타·병살)</option>
+          <option value="gb">땅볼·병살</option>
+          <option value="fb">플라이·직선타</option>
+        </select>
+      </div>
       <div class="field"><label for="f-runner">주자</label>
         <select id="f-runner">
           <option value="all">전체</option>
@@ -195,6 +216,10 @@ tr:last-child td { border-bottom: 0; }
 (() => {
 "use strict";
 const TYPE_VAR = { "직구": "--pt-ff", "투심": "--pt-ft", "커터": "--pt-fc", "슬라이더": "--pt-sl", "스위퍼": "--pt-sw", "커브": "--pt-cu", "체인지업": "--pt-ch", "포크": "--pt-fo" };
+const PA_GROUPS = {
+  so: ["삼진"], bb: ["볼넷", "고의4구", "사구"], hit: ["1루타", "2루타", "3루타", "홈런"], xbh: ["2루타", "3루타", "홈런"], hr: ["홈런"],
+  out: ["땅볼", "플라이", "라인드라이브", "병살타"], gb: ["땅볼", "병살타"], fb: ["플라이", "라인드라이브"],
+};
 const RESULT_LABEL = { B: "볼", T: "루킹 스트라이크", S: "헛스윙", F: "파울", H: "인플레이", W: "번트 파울", V: "번트 헛스윙" };
 const COUNTS = [];
 for (let b = 0; b <= 3; b++) for (let s = 0; s <= 2; s++) COUNTS.push([b, s]);
@@ -212,9 +237,9 @@ const fmt = (n) => n.toLocaleString("ko-KR");
 const pct = (a, b) => (b ? (100 * a / b) : 0);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-let D, N, P, B, T, V, X, Z, S, DT, MONTH, pitchCount;
+let D, N, P, B, T, V, X, Z, S, DT, R, MONTH, pitchCount;
 let colors = [];
-const state = { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", hidden: new Set() };
+const state = { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all", hidden: new Set() };
 let sel = new Uint32Array(0);
 
 function readColors() {
@@ -229,6 +254,7 @@ function decode(data) {
   V = Uint16Array.from(c.v, (v) => v ?? 0);
   X = Int16Array.from(c.x, (v) => v ?? -32768); Z = Int16Array.from(c.z, (v) => v ?? -32768);
   S = Uint16Array.from(c.s); DT = Uint16Array.from(c.d);
+  R = Int16Array.from(c.r, (v) => v ?? -1);  // 타석 결과*2 + 결정구, 없으면 -1
   const months = [...new Set(data.dates.map((d) => d.slice(0, 7)))];
   const monthIdx = data.dates.map((d) => months.indexOf(d.slice(0, 7)));
   MONTH = { list: months, of: Uint8Array.from(DT, (d) => monthIdx[d]) };
@@ -254,6 +280,8 @@ function filter() {
   const sc = state.score;
   const pTeam = D.pitchers.map((p) => p[1]);
   const diff = D.cols.sd;  // 점수차는 null이 있어 원본 배열 그대로 사용
+  const lastOnly = state.scope === "last";
+  const paSet = state.pa === "all" ? null : new Set(PA_GROUPS[state.pa].map((x) => D.pa_results.indexOf(x)));
   for (let i = 0; i < N; i++) {
     const s = S[i];
     if (pit >= 0) { if (P[i] !== pit) continue; }
@@ -261,6 +289,8 @@ function filter() {
     if (st >= 0 && lefty(s) !== st) continue;
     if (o >= 0 && outs(s) !== o) continue;
     if (mo >= 0 && MONTH.of[i] !== mo) continue;
+    if (lastOnly && (R[i] < 0 || !(R[i] & 1))) continue;
+    if (paSet && (R[i] < 0 || !paSet.has(R[i] >> 1))) continue;
     if (rd === "reg" && post(s)) continue;
     if (rd === "post" && !post(s)) continue;
     if (cnt !== "all") {
@@ -317,20 +347,20 @@ function fillMonths() {
     .concat(MONTH.list.map((m, i) => `<option value="${i}">${+m.slice(5)}월</option>`)).join("");
 }
 function syncControls() {
-  for (const k of ["team", "count", "runner", "score", "month", "round"]) $("f-" + k).value = state[k];
+  for (const k of ["team", "count", "runner", "score", "month", "round", "pa"]) $("f-" + k).value = state[k];
   fillPitchers();
-  for (const k of ["stance", "outs"]) for (const b of $("f-" + k).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === state[k]));
+  for (const k of ["stance", "outs", "scope"]) for (const b of $("f-" + k).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === state[k]));
 }
 function bindControls() {
   $("f-team").addEventListener("change", (e) => { state.team = e.target.value; state.pitcher = "all"; fillPitchers(); update(); });
   $("f-pitcher").addEventListener("change", (e) => { state.pitcher = e.target.value; update(); });
-  for (const k of ["count", "runner", "score", "month", "round"]) $("f-" + k).addEventListener("change", (e) => { state[k] = e.target.value; update(); });
-  for (const k of ["stance", "outs"]) $("f-" + k).addEventListener("click", (e) => {
+  for (const k of ["count", "runner", "score", "month", "round", "pa"]) $("f-" + k).addEventListener("change", (e) => { state[k] = e.target.value; update(); });
+  for (const k of ["stance", "outs", "scope"]) $("f-" + k).addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
     state[k] = b.dataset.v; syncControls(); update();
   });
   $("reset").addEventListener("click", () => {
-    Object.assign(state, { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all" });
+    Object.assign(state, { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", scope: "all", pa: "all" });
     state.hidden.clear(); syncControls(); update();
   });
 }
@@ -340,6 +370,7 @@ function aggregate() {
   const nt = D.types.length;
   const by = Array.from({ length: nt }, () => ({ n: 0, vSum: 0, vN: 0, vMax: 0, strike: 0, swing: 0, whiff: 0 }));
   const byCount = COUNTS.map(() => new Uint32Array(nt));
+  const fin = Array.from({ length: nt }, () => new Uint32Array(D.pa_results.length));
   for (const i of sel) {
     const t = T[i], s = S[i], a = by[t];
     a.n++;
@@ -349,8 +380,9 @@ function aggregate() {
     if (r === "S" || r === "F" || r === "H" || r === "W" || r === "V") a.swing++;
     if (r === "S" || r === "V") a.whiff++;
     byCount[balls(s) * 3 + strikes(s)][t]++;
+    if (R[i] >= 0 && (R[i] & 1)) fin[t][R[i] >> 1]++;
   }
-  return { by, byCount };
+  return { by, byCount, fin };
 }
 
 /* ---------- 렌더 ---------- */
@@ -364,11 +396,18 @@ function shell() {
         <div class="zone-box" id="zonebox"><canvas id="zone" role="img" aria-label="스트라이크존 투구 분포"></canvas></div>
         <div class="legend" id="legend"></div>
       </section>
+      <div class="stackcol">
       <section class="panel" aria-labelledby="h-mix">
         <h2 id="h-mix">구종 구성</h2>
         <p class="sub">구속 km/h · S% = 볼이 아닌 공 비율 · 헛스윙% = 스윙 중 헛스윙 비율</p>
         <div class="tablewrap"><table id="mix"></table></div>
       </section>
+      <section class="panel" aria-labelledby="h-fin">
+        <h2 id="h-fin">결정구 결과</h2>
+        <p class="sub">타석의 마지막 공을 구종별로 모은 결과 · 피안타율 = 안타 / 타수 (볼넷·사구·희생타 제외)</p>
+        <div class="tablewrap"><table id="fin"></table></div>
+      </section>
+      </div>
     </div>
     <section class="panel" aria-labelledby="h-count">
       <h2 id="h-count">카운트별 볼배합</h2>
@@ -409,6 +448,27 @@ function renderMix(agg) {
         <td>${r.vN ? (r.vSum / r.vN).toFixed(1) : "–"}</td><td>${r.vMax || "–"}</td>
         <td>${pct(r.strike, r.n).toFixed(1)}%</td><td>${r.swing ? pct(r.whiff, r.swing).toFixed(1) + "%" : "–"}</td></tr>`;
     }).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">조건에 맞는 투구가 없습니다. 필터를 줄여 보세요.</td></tr>`) + "</tbody>";
+}
+
+function renderFinish(agg) {
+  const idx = (names) => names.map((n) => D.pa_results.indexOf(n));
+  const K = idx(["삼진"]), BB = idx(["볼넷", "고의4구", "사구"]), H = idx(["1루타", "2루타", "3루타", "홈런"]);
+  const XB = idx(["2루타", "3루타", "홈런"]), NOAB = idx(["볼넷", "고의4구", "사구", "희생번트", "희생플라이"]);
+  const sum = (arr, ids) => ids.reduce((a, i) => a + arr[i], 0);
+  const line = (arr) => {
+    const pa = arr.reduce((a, v) => a + v, 0), ab = pa - sum(arr, NOAB), h = sum(arr, H);
+    return { pa, k: sum(arr, K), bb: sum(arr, BB), h, xb: sum(arr, XB), ab };
+  };
+  const total = new Uint32Array(D.pa_results.length);
+  const rows = agg.fin.map((arr, t) => { arr.forEach((v, j) => total[j] += v); return { t, ...line(arr) }; })
+    .filter((r) => r.pa > 0).sort((a, b) => b.pa - a.pa);
+  const avg = (r) => r.ab ? (r.h / r.ab).toFixed(3).replace(/^0/, "") : "–";
+  const cells = (r) => `<td>${fmt(r.pa)}</td><td>${pct(r.k, r.pa).toFixed(1)}%</td><td>${pct(r.bb, r.pa).toFixed(1)}%</td><td>${fmt(r.h)}</td><td>${fmt(r.xb)}</td><td>${avg(r)}</td>`;
+  const tot = line(total);
+  $("fin").innerHTML = `<thead><tr><th>구종</th><th>타석</th><th>삼진%</th><th>볼넷%</th><th>안타</th><th>장타</th><th>피안타율</th></tr></thead><tbody>` +
+    (rows.length ? rows.map((r) => `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>${cells(r)}</tr>`).join("") +
+      `<tr class="total"><td>합계</td>${cells(tot)}</tr>`
+      : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">조건에 맞는 타석이 없습니다.</td></tr>`) + "</tbody>";
 }
 
 function renderCounts(agg) {
@@ -518,7 +578,8 @@ function zoneHover(e) {
   const s = S[best], p = D.pitchers[P[best]], b = D.batters[B[best]];
   const bs = bases(s);
   const runners = bs ? ["1", "2", "3"].filter((_, k) => bs >> k & 1).join("·") + "루" : "주자 없음";
-  showTip(e.clientX, e.clientY, `<b>${esc(D.types[T[best]])} ${V[best] || "–"}km/h</b> · ${RESULT_LABEL[D.results[result(s)]] || "–"}<br>
+  const pa = R[best] >= 0 ? `<br>타석 결과: <b>${esc(D.pa_results[R[best] >> 1])}</b>${R[best] & 1 ? " (결정구)" : ""}` : "";
+  showTip(e.clientX, e.clientY, `<b>${esc(D.types[T[best]])} ${V[best] || "–"}km/h</b> · ${RESULT_LABEL[D.results[result(s)]] || "–"}${pa}<br>
     ${esc(p[0])} → ${esc(b[0])} (${lefty(s) ? "좌" : "우"}타)<br>
     <span class="m">${balls(s)}-${strikes(s)} · ${outs(s)}아웃 · ${runners}<br>${D.dates[DT[best]]}</span>`);
 }
@@ -546,7 +607,7 @@ document.addEventListener("mouseover", (e) => {
 function update() {
   filter();
   const agg = aggregate();
-  renderStatline(agg); renderMix(agg); renderCounts(agg); renderLegend(agg); drawZone();
+  renderStatline(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg); drawZone();
 }
 
 function onTheme() { if (!D) return; readColors(); update(); }

@@ -15,6 +15,7 @@ PITCH_COLUMNS = [
     "balls", "strikes", "outs", "on_1b", "on_2b", "on_3b",
     "away_score", "home_score", "score_diff",
     "pitch_result", "pitch_type", "speed_kmh",
+    "pa_result", "pa_last_pitch", "pa_result_text",
     "plate_x", "plate_z", "sz_top", "sz_bot",
     "x0", "y0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az",
     "pts_pitch_id", "text",
@@ -56,6 +57,39 @@ def plate_z(p, y_plate=17 / 24):
         return None
     t = (-b - math.sqrt(disc)) / (2 * a)
     return round(z0 + vz0 * t + az * t * t / 2, 4)
+
+
+# 타석 결과 문구 -> 범주. 위에서부터 먼저 맞는 규칙을 쓴다.
+PA_RULES = [
+    (("낫 아웃", "낫아웃", "삼진"), "삼진"),
+    (("실책",), "실책출루"),
+    (("고의4구",), "고의4구"),
+    (("볼넷",), "볼넷"),
+    (("몸에 맞는",), "사구"),
+    (("홈런",), "홈런"),
+    (("3루타",), "3루타"),
+    (("2루타",), "2루타"),
+    (("1루타", "안타"), "1루타"),
+    (("희생플라이",), "희생플라이"),
+    (("희생번트",), "희생번트"),
+    (("병살", "삼중살"), "병살타"),
+    (("야수선택",), "야수선택"),
+    (("땅볼",), "땅볼"),
+    (("라인드라이브",), "라인드라이브"),
+    (("플라이",), "플라이"),
+    (("번트",), "번트아웃"),
+]
+PA_RESULT_EVENTS = (13, 23)  # 13 타자 결과, 23 장타/홈런 (14, 24는 주자 이벤트)
+PA_START_EVENTS = (0, 8)  # 0 공수 교대, 8 타자 등장
+
+
+def classify_pa(text):
+    """'황영묵 : 우익수 오른쪽 뒤 3루타' -> '3루타'."""
+    body = text.split(" : ", 1)[-1]
+    for keys, label in PA_RULES:
+        if any(k in body for k in keys):
+            return label
+    return "기타"
 
 
 def _result(data):
@@ -107,11 +141,21 @@ def parse_relay(data, game_id, inning, names=None):
     events.sort(key=lambda e: e[0])
 
     rows = []
+    pa_rows = []  # 결과가 아직 안 나온 현재 타석의 투구들
     prev = None
     for _, relay, opt, pts in events:
         state = opt.get("currentGameState") or {}
         before = prev if prev is not None else state
         prev = state
+        etype = opt.get("type")
+        if etype in PA_START_EVENTS:
+            pa_rows = []
+        elif etype in PA_RESULT_EVENTS and pa_rows:
+            text = opt.get("text") or ""
+            for r in pa_rows:
+                r["pa_result"], r["pa_result_text"] = classify_pa(text), text
+            pa_rows[-1]["pa_last_pitch"] = 1
+            pa_rows = []
         if not is_pitch(opt):
             continue
         # homeOrAway "0" = 원정팀 공격(초), "1" = 홈팀 공격(말)
@@ -145,6 +189,9 @@ def parse_relay(data, game_id, inning, names=None):
             "pitch_result": opt.get("pitchResult"),
             "pitch_type": opt.get("stuff"),
             "speed_kmh": _num(opt.get("speed")),
+            "pa_result": None,
+            "pa_last_pitch": 0,
+            "pa_result_text": None,
             "pts_pitch_id": opt.get("ptsPitchId"),
             "text": opt.get("text"),
         }
@@ -152,6 +199,7 @@ def parse_relay(data, game_id, inning, names=None):
             row[dst] = _num(p.get(src)) if src != "stance" else p.get(src)
         row["plate_z"] = plate_z(p)
         rows.append(row)
+        pa_rows.append(row)
     return rows
 
 
