@@ -64,7 +64,7 @@ class NaverSportsClient:
     def schedule(self, from_date, to_date):
         """from_date/to_date: 'YYYY-MM-DD'. 기간 내 KBO 경기 목록(원본 JSON)."""
         params = {
-            "fields": "basic",
+            "fields": "all",
             "upperCategoryId": "kbaseball",
             "categoryId": "kbo",
             "fromDate": from_date,

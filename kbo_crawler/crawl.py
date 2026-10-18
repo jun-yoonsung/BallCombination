@@ -18,6 +18,7 @@ from .parse import PITCH_COLUMNS, parse_games, parse_relay, player_names
 log = logging.getLogger("kbo_crawler")
 
 MAX_INNING = 15
+META_COLUMNS = ["game_date", "round_code", "stadium", "away_team", "home_team"]
 
 
 def crawl_game(client, game_id, game_meta=None):
@@ -36,7 +37,7 @@ def crawl_game(client, game_id, game_meta=None):
         r["pitcher_name"] = r["pitcher_name"] or names.get(str(r["pitcher_id"]))
         r["batter_name"] = r["batter_name"] or names.get(str(r["batter_id"]))
         if game_meta:
-            r.update({k: game_meta.get(k) for k in ("game_date", "away_team", "home_team")})
+            r.update({k: game_meta.get(k) for k in META_COLUMNS})
     return rows
 
 
@@ -72,12 +73,11 @@ def main(argv=None):
             log.info("%s ~ %s: 종료된 경기 %d개", s, e, len(found))
             games.extend(found)
 
-    meta_cols = ["game_date", "away_team", "home_team"]
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     total = 0
     with out.open("w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=meta_cols + PITCH_COLUMNS, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=META_COLUMNS + PITCH_COLUMNS, extrasaction="ignore")
         writer.writeheader()
         for i, g in enumerate(games, 1):
             try:

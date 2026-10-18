@@ -1,7 +1,13 @@
 """네이버 relay / schedule 응답 JSON을 투구 단위 행(dict)으로 변환한다.
 
 필드 이름은 네이버가 바꿀 수 있으므로 없는 값은 None으로 두고 죽지 않게 한다.
+
+좌표계는 PITCHf/x 관례(단위 ft, 포수 시점)를 따른다. ptsOptions의 crossPlateY는
+높이가 아니라 홈플레이트 앞면까지의 거리(y, 항상 약 0.708ft)이므로, 홈플레이트 통과
+높이(plate_z)는 궤적 파라미터로 직접 계산한다.
 """
+
+import math
 
 PITCH_COLUMNS = [
     "game_id", "inning", "half", "seqno", "pitch_num",
@@ -15,7 +21,6 @@ PITCH_COLUMNS = [
 # ptsOptions 필드 -> 출력 컬럼
 PTS_FIELDS = {
     "crossPlateX": "plate_x",
-    "crossPlateY": "plate_z",
     "topSz": "sz_top",
     "bottomSz": "sz_bot",
     "x0": "x0", "y0": "y0", "z0": "z0",
@@ -33,6 +38,22 @@ def _num(v):
     except (TypeError, ValueError):
         return v
     return int(f) if f.is_integer() and "." not in str(v) else f
+
+
+def plate_z(p, y_plate=17 / 24):
+    """궤적 y(t) = y0 + vy0*t + ay*t^2/2 가 y_plate에 닿는 시점의 높이 z(t)."""
+    try:
+        y0, vy0, ay = float(p["y0"]), float(p["vy0"]), float(p["ay"])
+        z0, vz0, az = float(p["z0"]), float(p["vz0"]), float(p["az"])
+        y_plate = float(p.get("crossPlateY", y_plate))
+    except (KeyError, TypeError, ValueError):
+        return None
+    a, b, c = ay / 2, vy0, y0 - y_plate
+    disc = b * b - 4 * a * c
+    if a == 0 or disc < 0:
+        return None
+    t = (-b - math.sqrt(disc)) / (2 * a)
+    return round(z0 + vz0 * t + az * t * t / 2, 4)
 
 
 def _result(data):
@@ -89,9 +110,9 @@ def parse_relay(data, game_id, inning, names=None):
                 "pitcher_name": names.get(str(pitcher_id)),
                 "batter_id": batter_id,
                 "batter_name": names.get(str(batter_id)),
-                "balls": state.get("ball"),
-                "strikes": state.get("strike"),
-                "outs": state.get("out"),
+                "balls": _num(state.get("ball")),
+                "strikes": _num(state.get("strike")),
+                "outs": _num(state.get("out")),
                 "pitch_result": opt.get("pitchResult"),
                 "pitch_type": opt.get("stuff"),
                 "speed_kmh": _num(opt.get("speed")),
@@ -100,6 +121,7 @@ def parse_relay(data, game_id, inning, names=None):
             }
             for src, dst in PTS_FIELDS.items():
                 row[dst] = _num(p.get(src)) if src != "stance" else p.get(src)
+            row["plate_z"] = plate_z(p)
             rows.append(row)
     rows.sort(key=lambda r: (r["seqno"] is None, r["seqno"] or 0))
     return rows
@@ -122,6 +144,8 @@ def parse_games(schedule_data, finished_only=True):
             "away_score": g.get("awayTeamScore"),
             "home_score": g.get("homeTeamScore"),
             "stadium": g.get("stadium"),
+            # kbo_e 시범경기, kbo_r 정규시즌, 그 외 포스트시즌
+            "round_code": g.get("roundCode"),
             "status": status,
         })
     return games

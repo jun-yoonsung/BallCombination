@@ -30,13 +30,14 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 
 | 컬럼 | 설명 |
 |---|---|
-| `game_id`, `game_date`, `away_team`, `home_team` | 경기 정보 |
+| `game_id`, `game_date`, `stadium`, `away_team`, `home_team` | 경기 정보 |
+| `round_code` | `kbo_e` 시범경기, `kbo_r` 정규시즌, 그 외는 포스트시즌 |
 | `inning`, `half` | 이닝, `top`(초) / `bottom`(말) |
 | `pitcher_id/name`, `batter_id/name`, `stance` | 투수, 타자, 타자 타석(L/R) |
 | `balls`, `strikes`, `outs` | 해당 투구 **후** 카운트 |
-| `pitch_num`, `pitch_result` | 타석 내 투구 번호, 결과 코드(B 볼, T 스트라이크, F 파울, H 타격 등) |
+| `pitch_num`, `pitch_result` | 타석 내 투구 번호, 결과 코드(B 볼, T 루킹 스트라이크, S 헛스윙, F 파울, H 타격 등) |
 | `pitch_type`, `speed_kmh` | 구종, 구속(km/h) |
-| `plate_x`, `plate_z` | 홈플레이트 통과 위치(좌우, 높이). 단위는 ft로 추정 |
+| `plate_x`, `plate_z` | 홈플레이트 통과 위치(좌우, 지면으로부터 높이). 단위 ft, PITCHf/x 좌표계 |
 | `sz_top`, `sz_bot` | 해당 타자 스트라이크존 상단/하단 |
 | `x0..az` | 궤적 파라미터(초기 위치·속도·가속도) |
 | `text` | 문자중계 원문 |
@@ -46,6 +47,9 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 1. `GET https://api-gw.sports.naver.com/schedule/games?...&categoryId=kbo` 로 기간 내 경기 목록 조회
 2. 경기마다 `GET /schedule/games/{gameId}/relay?inning=N` 을 1회부터 호출 (연장까지, 데이터가 없으면 중단)
 3. 응답의 `textOptions`(구종/구속/카운트)와 `ptsOptions`(투구 추적 좌표)를 `ptsPitchId`로 매칭해서 한 행으로 만듦
+4. `ptsOptions.crossPlateY`는 높이가 아니라 홈플레이트 앞면까지의 거리(항상 약 0.708ft)이므로,
+   투구 높이 `plate_z`는 궤적 파라미터(`y0, vy0, ay, z0, vz0, az`)로 홈플레이트 통과 시점을 구해 계산함
+   (같은 방식으로 계산한 x가 네이버의 `crossPlateX`와 일치하는 것을 확인)
 
 ## 주의
 
