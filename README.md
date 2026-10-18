@@ -69,3 +69,17 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 ```bash
 python -m unittest -v
 ```
+
+## 웹 탐색기
+
+`web/index.html`은 수집한 투구로 투수별 볼배합을 보는 페이지입니다.
+
+- **투구 위치**: 스트라이크존 위에 구종별 색으로 표시 (포수 시점, 타자별 존을 리그 평균 높이에 맞춰 정규화)
+- **구종 구성**: 구종별 투구 수, 비율, 평균/최고 구속, 스트라이크%, 헛스윙%
+- **카운트별 볼배합**: 투구 직전 카운트 12가지마다 구종 비율
+- **필터**: 팀, 투수, 타자 타석(좌/우), 카운트 상황, 주자, 아웃, 점수 상황, 월, 정규/포스트시즌
+
+```bash
+python -m kbo_crawler.export_web "datasets/kbo_pitches/2026-*.csv" --out web/pitches.json
+cd web && python -m http.server 8000   # http://localhost:8000
+```

@@ -1,0 +1,569 @@
+<meta charset="utf-8">
+<title>KBO 볼배합 탐색기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: 필터 레일(좌) + 분석 영역(우). 분석 영역은 스트라이크존 / 구종 구성표 / 카운트별 볼배합 순. 좁으면 한 열. */
+:root {
+  --bg: #f3f6f3;
+  --surface: #ffffff;
+  --ink: #15201a;
+  --muted: #5a665f;
+  --faint: #8b958f;
+  --line: #dbe2dc;
+  --accent: #1d6a48;
+  --accent-soft: #e3efe8;
+  --zone: #15201a;
+  --pt-ff: #e34948; --pt-ft: #eb6834; --pt-fc: #eda100; --pt-sl: #2a78d6;
+  --pt-sw: #6250d6; --pt-cu: #008300; --pt-ch: #1baf7a; --pt-fo: #e87ba4; --pt-etc: #8a918c;
+  --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1411; --surface: #151d19; --ink: #e8eee9; --muted: #9ba69f; --faint: #6c7770;
+    --line: #29342e; --accent: #62c08f; --accent-soft: #1c2e25; --zone: #e8eee9;
+    --pt-ff: #e66767; --pt-ft: #d95926; --pt-fc: #c98500; --pt-sl: #3987e5;
+    --pt-sw: #9085e9; --pt-cu: #008300; --pt-ch: #199e70; --pt-fo: #d55181; --pt-etc: #7d857f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1411; --surface: #151d19; --ink: #e8eee9; --muted: #9ba69f; --faint: #6c7770;
+  --line: #29342e; --accent: #62c08f; --accent-soft: #1c2e25; --zone: #e8eee9;
+  --pt-ff: #e66767; --pt-ft: #d95926; --pt-fc: #c98500; --pt-sl: #3987e5;
+  --pt-sw: #9085e9; --pt-cu: #008300; --pt-ch: #199e70; --pt-fo: #d55181; --pt-etc: #7d857f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: 30px; letter-spacing: 0.01em; margin: 0; line-height: 1.1; text-wrap: balance; }
+h1 small { font-family: var(--font-data); font-size: 13px; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
+.source { color: var(--muted); font-size: 12px; }
+
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.filters { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 860px) { .filters { position: static; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+select {
+  font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 8px; width: 100%; min-width: 0;
+}
+select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { flex: 1; font: inherit; font-size: 13px; padding: 5px 0; border: 0; background: var(--bg); color: var(--muted); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.reset { font: inherit; font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; justify-self: start; }
+
+main { display: grid; gap: 20px; min-width: 0; }
+.statline { display: flex; flex-wrap: wrap; gap: 6px 28px; align-items: baseline; }
+.statline .who { font-size: 22px; font-weight: 600; }
+.statline .who span { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.stat { display: grid; }
+.stat b { font-family: var(--font-data); font-weight: 500; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat i { font-style: normal; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.panel .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.row2 { display: grid; grid-template-columns: minmax(260px, 360px) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 1060px) { .row2 { grid-template-columns: minmax(0, 1fr); } }
+
+.zone-box { position: relative; width: 100%; max-width: 380px; aspect-ratio: 5 / 5.4; margin: 0 auto; }
+.zone-box canvas { width: 100%; height: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px 3px 8px; cursor: pointer; }
+.chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+.chip[aria-pressed="false"] { color: var(--faint); }
+.chip[aria-pressed="false"] .dot { background: transparent !important; box-shadow: inset 0 0 0 1.5px var(--faint); }
+.chip em { font-style: normal; font-family: var(--font-data); color: var(--muted); font-size: 11px; }
+
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th { text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--line); font-family: var(--font-data); font-size: 13px; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; font-family: var(--font-body); }
+td .tname { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+td .tname i { width: 10px; height: 10px; border-radius: 50%; }
+.bar { display: inline-block; vertical-align: middle; height: 6px; border-radius: 3px; background: var(--faint); margin-right: 8px; opacity: 0.55; }
+tr:last-child td { border-bottom: 0; }
+
+.counts { display: grid; gap: 4px; }
+.crow { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 10px; align-items: center; }
+.crow .lab { font-family: var(--font-data); font-size: 13px; }
+.crow .lab small { color: var(--muted); font-size: 11px; }
+.crow .n { font-family: var(--font-data); font-size: 12px; color: var(--muted); text-align: right; }
+.stack { display: flex; gap: 2px; height: 22px; }
+.stack .seg2 { height: 100%; min-width: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-data); font-size: 11px; color: #fff; overflow: hidden; cursor: default; }
+.stack .seg2:first-child { border-radius: 4px 0 0 4px; }
+.stack .seg2:last-child { border-radius: 0 4px 4px 0; }
+.stack .seg2:only-child { border-radius: 4px; }
+.stack.empty { background: var(--bg); border-radius: 4px; }
+.cgroup { font-size: 11px; color: var(--faint); letter-spacing: 0.06em; margin-top: 8px; }
+.cgroup:first-child { margin-top: 0; }
+
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); max-width: 240px; }
+.tip b { font-weight: 600; }
+.tip .m { font-family: var(--font-data); color: var(--muted); }
+
+.state { padding: 40px 16px; text-align: center; color: var(--muted); }
+.note { color: var(--muted); font-size: 12px; max-width: 70ch; }
+@media (prefers-reduced-motion: no-preference) { .stack .seg2 { transition: flex-grow 0.25s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>KBO 볼배합 탐색기<small id="season"></small></h1>
+    <div class="source" id="source">네이버 스포츠 문자중계 투구 추적 데이터</div>
+  </header>
+
+  <div class="layout">
+    <aside class="filters" aria-label="필터">
+      <div class="field"><label for="f-team">팀</label><select id="f-team"></select></div>
+      <div class="field"><label for="f-pitcher">투수</label><select id="f-pitcher"></select></div>
+      <div class="field"><label id="l-stance">타자 타석</label>
+        <div class="seg" id="f-stance" role="group" aria-labelledby="l-stance">
+          <button type="button" data-v="all" aria-pressed="true">전체</button>
+          <button type="button" data-v="L" aria-pressed="false">좌타</button>
+          <button type="button" data-v="R" aria-pressed="false">우타</button>
+        </div>
+      </div>
+      <div class="field"><label for="f-count">카운트</label><select id="f-count"></select></div>
+      <div class="field"><label for="f-runner">주자</label>
+        <select id="f-runner">
+          <option value="all">전체</option>
+          <option value="none">주자 없음</option>
+          <option value="on">주자 있음</option>
+          <option value="risp">득점권 (2·3루)</option>
+          <option value="1b">1루만</option>
+          <option value="full">만루</option>
+        </select>
+      </div>
+      <div class="field"><label id="l-outs">아웃</label>
+        <div class="seg" id="f-outs" role="group" aria-labelledby="l-outs">
+          <button type="button" data-v="all" aria-pressed="true">전체</button>
+          <button type="button" data-v="0" aria-pressed="false">0</button>
+          <button type="button" data-v="1" aria-pressed="false">1</button>
+          <button type="button" data-v="2" aria-pressed="false">2</button>
+        </div>
+      </div>
+      <div class="field"><label for="f-score">점수 상황 (투수팀 기준)</label>
+        <select id="f-score">
+          <option value="all">전체</option>
+          <option value="close">접전 (±2점 이내)</option>
+          <option value="lead">리드</option>
+          <option value="tie">동점</option>
+          <option value="trail">열세</option>
+        </select>
+      </div>
+      <div class="field"><label for="f-month">기간</label><select id="f-month"></select></div>
+      <div class="field"><label for="f-round">경기 구분</label>
+        <select id="f-round">
+          <option value="all">전체</option>
+          <option value="reg">정규시즌</option>
+          <option value="post">포스트시즌</option>
+        </select>
+      </div>
+      <button type="button" class="reset" id="reset">조건 초기화</button>
+    </aside>
+
+    <main id="main">
+      <div class="state" id="loading">투구 데이터를 불러오는 중…</div>
+    </main>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const TYPE_VAR = { "직구": "--pt-ff", "투심": "--pt-ft", "커터": "--pt-fc", "슬라이더": "--pt-sl", "스위퍼": "--pt-sw", "커브": "--pt-cu", "체인지업": "--pt-ch", "포크": "--pt-fo" };
+const RESULT_LABEL = { B: "볼", T: "루킹 스트라이크", S: "헛스윙", F: "파울", H: "인플레이", W: "번트 파울", V: "번트 헛스윙" };
+const COUNTS = [];
+for (let b = 0; b <= 3; b++) for (let s = 0; s <= 2; s++) COUNTS.push([b, s]);
+const COUNT_GROUPS = {
+  first: { label: "초구 (0-0)", test: (b, s) => b === 0 && s === 0 },
+  ahead: { label: "투수 유리 (0-1, 0-2, 1-2)", test: (b, s) => s > b && s > 0 },
+  behind: { label: "타자 유리 (1-0, 2-0, 3-0, 2-1, 3-1)", test: (b, s) => b > s },
+  even: { label: "동카운트 (1-1, 2-2)", test: (b, s) => b === s && b > 0 },
+  two: { label: "2스트라이크", test: (b, s) => s === 2 },
+  full: { label: "풀카운트 (3-2)", test: (b, s) => b === 3 && s === 2 },
+};
+
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n.toLocaleString("ko-KR");
+const pct = (a, b) => (b ? (100 * a / b) : 0);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+let D, N, P, B, T, V, X, Z, S, DT, MONTH, pitchCount;
+let colors = [];
+const state = { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all", hidden: new Set() };
+let sel = new Uint32Array(0);
+
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  colors = D.types.map((t) => cs.getPropertyValue(TYPE_VAR[t] || "--pt-etc").trim());
+}
+
+function decode(data) {
+  D = data; N = data.meta.count;
+  const c = data.cols;
+  P = Uint32Array.from(c.p); B = Uint32Array.from(c.b); T = Uint8Array.from(c.t);
+  V = Uint16Array.from(c.v, (v) => v ?? 0);
+  X = Int16Array.from(c.x, (v) => v ?? -32768); Z = Int16Array.from(c.z, (v) => v ?? -32768);
+  S = Uint16Array.from(c.s); DT = Uint16Array.from(c.d);
+  const months = [...new Set(data.dates.map((d) => d.slice(0, 7)))];
+  const monthIdx = data.dates.map((d) => months.indexOf(d.slice(0, 7)));
+  MONTH = { list: months, of: Uint8Array.from(DT, (d) => monthIdx[d]) };
+  pitchCount = new Uint32Array(data.pitchers.length);
+  for (let i = 0; i < N; i++) pitchCount[P[i]]++;
+}
+
+const balls = (s) => s & 3, strikes = (s) => (s >> 2) & 3, outs = (s) => (s >> 4) & 3;
+const bases = (s) => (s >> 6) & 7, lefty = (s) => (s >> 9) & 1, result = (s) => (s >> 10) & 15, post = (s) => (s >> 14) & 1;
+
+function filter() {
+  const out = new Uint32Array(N);
+  let k = 0;
+  const teamIdx = state.team === "all" ? -1 : +state.team;
+  const pit = state.pitcher === "all" ? -1 : +state.pitcher;
+  const st = state.stance === "all" ? -1 : (state.stance === "L" ? 1 : 0);
+  const cnt = state.count;
+  const grp = COUNT_GROUPS[cnt];
+  const single = cnt.includes("-") ? cnt.split("-").map(Number) : null;
+  const o = state.outs === "all" ? -1 : +state.outs;
+  const mo = state.month === "all" ? -1 : +state.month;
+  const rd = state.round;
+  const sc = state.score;
+  const pTeam = D.pitchers.map((p) => p[1]);
+  const diff = D.cols.sd;  // 점수차는 null이 있어 원본 배열 그대로 사용
+  for (let i = 0; i < N; i++) {
+    const s = S[i];
+    if (pit >= 0) { if (P[i] !== pit) continue; }
+    else if (teamIdx >= 0 && pTeam[P[i]] !== teamIdx) continue;
+    if (st >= 0 && lefty(s) !== st) continue;
+    if (o >= 0 && outs(s) !== o) continue;
+    if (mo >= 0 && MONTH.of[i] !== mo) continue;
+    if (rd === "reg" && post(s)) continue;
+    if (rd === "post" && !post(s)) continue;
+    if (cnt !== "all") {
+      const b = balls(s), k2 = strikes(s);
+      if (single ? (b !== single[0] || k2 !== single[1]) : !grp.test(b, k2)) continue;
+    }
+    if (state.runner !== "all") {
+      const bs = bases(s);
+      if (state.runner === "none" && bs !== 0) continue;
+      if (state.runner === "on" && bs === 0) continue;
+      if (state.runner === "risp" && (bs & 6) === 0) continue;
+      if (state.runner === "1b" && bs !== 1) continue;
+      if (state.runner === "full" && bs !== 7) continue;
+    }
+    if (sc !== "all" && diff) {
+      const d = diff[i];
+      if (d === null) continue;
+      if (sc === "close" && Math.abs(d) > 2) continue;
+      if (sc === "lead" && d <= 0) continue;
+      if (sc === "tie" && d !== 0) continue;
+      if (sc === "trail" && d >= 0) continue;
+    }
+    out[k++] = i;
+  }
+  sel = out.subarray(0, k);
+}
+
+/* ---------- 필터 UI ---------- */
+function fillTeams() {
+  const opts = [`<option value="all">전체 구단</option>`].concat(
+    D.teams.map((t, i) => [t, i]).sort((a, b) => a[0].localeCompare(b[0], "ko")).map(([t, i]) => `<option value="${i}">${esc(t)}</option>`));
+  $("f-team").innerHTML = opts.join("");
+}
+function fillPitchers() {
+  const teamIdx = state.team === "all" ? -1 : +state.team;
+  const list = D.pitchers.map((p, i) => ({ i, name: p[0], team: p[1], n: pitchCount[i] }))
+    .filter((p) => p.n > 0 && (teamIdx < 0 || p.team === teamIdx))
+    .sort((a, b) => b.n - a.n);
+  const opts = [`<option value="all">${teamIdx < 0 ? "리그 전체 투수" : "팀 전체 투수"}</option>`].concat(
+    list.map((p) => `<option value="${p.i}">${esc(p.name)}${teamIdx < 0 ? " · " + esc(D.teams[p.team]) : ""} (${fmt(p.n)}구)</option>`));
+  $("f-pitcher").innerHTML = opts.join("");
+  $("f-pitcher").value = state.pitcher;
+  if ($("f-pitcher").value !== state.pitcher) { state.pitcher = "all"; $("f-pitcher").value = "all"; }
+}
+function fillCounts() {
+  const opts = [`<option value="all">전체</option>`, `<optgroup label="상황">`]
+    .concat(Object.entries(COUNT_GROUPS).map(([k, g]) => `<option value="${k}">${g.label}</option>`))
+    .concat([`</optgroup><optgroup label="카운트 (볼-스트라이크)">`])
+    .concat(COUNTS.map(([b, s]) => `<option value="${b}-${s}">${b}-${s}</option>`)).concat(["</optgroup>"]);
+  $("f-count").innerHTML = opts.join("");
+}
+function fillMonths() {
+  $("f-month").innerHTML = [`<option value="all">시즌 전체</option>`]
+    .concat(MONTH.list.map((m, i) => `<option value="${i}">${+m.slice(5)}월</option>`)).join("");
+}
+function syncControls() {
+  for (const k of ["team", "count", "runner", "score", "month", "round"]) $("f-" + k).value = state[k];
+  fillPitchers();
+  for (const k of ["stance", "outs"]) for (const b of $("f-" + k).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.v === state[k]));
+}
+function bindControls() {
+  $("f-team").addEventListener("change", (e) => { state.team = e.target.value; state.pitcher = "all"; fillPitchers(); update(); });
+  $("f-pitcher").addEventListener("change", (e) => { state.pitcher = e.target.value; update(); });
+  for (const k of ["count", "runner", "score", "month", "round"]) $("f-" + k).addEventListener("change", (e) => { state[k] = e.target.value; update(); });
+  for (const k of ["stance", "outs"]) $("f-" + k).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    state[k] = b.dataset.v; syncControls(); update();
+  });
+  $("reset").addEventListener("click", () => {
+    Object.assign(state, { team: "all", pitcher: "all", stance: "all", count: "all", runner: "all", outs: "all", score: "all", month: "all", round: "all" });
+    state.hidden.clear(); syncControls(); update();
+  });
+}
+
+/* ---------- 집계 ---------- */
+function aggregate() {
+  const nt = D.types.length;
+  const by = Array.from({ length: nt }, () => ({ n: 0, vSum: 0, vN: 0, vMax: 0, strike: 0, swing: 0, whiff: 0 }));
+  const byCount = COUNTS.map(() => new Uint32Array(nt));
+  for (const i of sel) {
+    const t = T[i], s = S[i], a = by[t];
+    a.n++;
+    if (V[i]) { a.vSum += V[i]; a.vN++; if (V[i] > a.vMax) a.vMax = V[i]; }
+    const r = D.results[result(s)];
+    if (r && r !== "B") a.strike++;
+    if (r === "S" || r === "F" || r === "H" || r === "W" || r === "V") a.swing++;
+    if (r === "S" || r === "V") a.whiff++;
+    byCount[balls(s) * 3 + strikes(s)][t]++;
+  }
+  return { by, byCount };
+}
+
+/* ---------- 렌더 ---------- */
+function shell() {
+  $("main").innerHTML = `
+    <div class="statline" id="statline"></div>
+    <div class="row2">
+      <section class="panel" aria-labelledby="h-zone">
+        <h2 id="h-zone">투구 위치</h2>
+        <p class="sub">포수 시점 · 스트라이크존은 타자별 존을 리그 평균 높이에 맞춰 정규화</p>
+        <div class="zone-box" id="zonebox"><canvas id="zone" role="img" aria-label="스트라이크존 투구 분포"></canvas></div>
+        <div class="legend" id="legend"></div>
+      </section>
+      <section class="panel" aria-labelledby="h-mix">
+        <h2 id="h-mix">구종 구성</h2>
+        <p class="sub">구속 km/h · S% = 볼이 아닌 공 비율 · 헛스윙% = 스윙 중 헛스윙 비율</p>
+        <div class="tablewrap"><table id="mix"></table></div>
+      </section>
+    </div>
+    <section class="panel" aria-labelledby="h-count">
+      <h2 id="h-count">카운트별 볼배합</h2>
+      <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
+      <div class="counts" id="counts"></div>
+    </section>
+    <p class="note">좌우 위치와 높이 단위는 ft(30.48cm). 투구 추적값이 없는 공은 위치 그림에서만 빠집니다. 카운트 필터를 걸면 카운트별 볼배합은 해당 카운트만 표시됩니다.</p>`;
+  setupZone();
+}
+
+function renderStatline(agg) {
+  const pit = state.pitcher === "all" ? null : D.pitchers[+state.pitcher];
+  const who = pit ? `${esc(pit[0])}<span>${esc(D.teams[pit[1]])}</span>`
+    : state.team === "all" ? "리그 전체" : `${esc(D.teams[+state.team])}<span>팀 투수 전체</span>`;
+  const ffIdx = D.types.indexOf("직구");
+  const ff = ffIdx >= 0 ? agg.by[ffIdx] : null;
+  let vmax = 0; for (const a of agg.by) vmax = Math.max(vmax, a.vMax);
+  const pitchersN = new Set(); const gamesN = new Set();
+  for (const i of sel) { pitchersN.add(P[i]); gamesN.add(DT[i]); }
+  $("statline").innerHTML = `
+    <div class="who">${who}</div>
+    <div class="stat"><b>${fmt(sel.length)}</b><i>투구</i></div>
+    ${pit ? "" : `<div class="stat"><b>${fmt(pitchersN.size)}</b><i>투수</i></div>`}
+    <div class="stat"><b>${ff && ff.vN ? (ff.vSum / ff.vN).toFixed(1) : "–"}</b><i>직구 평균 km/h</i></div>
+    <div class="stat"><b>${vmax || "–"}</b><i>최고 km/h</i></div>`;
+}
+
+function renderMix(agg) {
+  const total = sel.length;
+  const rows = agg.by.map((a, t) => ({ t, ...a })).filter((r) => r.n > 0).sort((a, b) => b.n - a.n);
+  const maxShare = rows.length ? rows[0].n / total : 1;
+  $("mix").innerHTML = `<thead><tr><th>구종</th><th>투구 수</th><th>비율</th><th>평균</th><th>최고</th><th>S%</th><th>헛스윙%</th></tr></thead><tbody>` +
+    (rows.length ? rows.map((r) => {
+      const share = pct(r.n, total);
+      return `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>
+        <td>${fmt(r.n)}</td>
+        <td><span class="bar" style="width:${Math.max(2, 44 * (r.n / total) / maxShare)}px"></span>${share.toFixed(1)}%</td>
+        <td>${r.vN ? (r.vSum / r.vN).toFixed(1) : "–"}</td><td>${r.vMax || "–"}</td>
+        <td>${pct(r.strike, r.n).toFixed(1)}%</td><td>${r.swing ? pct(r.whiff, r.swing).toFixed(1) + "%" : "–"}</td></tr>`;
+    }).join("") : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">조건에 맞는 투구가 없습니다. 필터를 줄여 보세요.</td></tr>`) + "</tbody>";
+}
+
+function renderCounts(agg) {
+  const groups = [["0볼", [0]], ["1볼", [1]], ["2볼", [2]], ["3볼", [3]]];
+  let html = "";
+  for (const [label, bs] of groups) {
+    const rows = COUNTS.map(([b, s], ci) => ({ b, s, ci })).filter((r) => bs.includes(r.b));
+    html += `<div class="cgroup">${label}</div>`;
+    for (const r of rows) {
+      const arr = agg.byCount[r.ci];
+      let n = 0; for (const v of arr) n += v;
+      const segs = [...arr].map((v, t) => ({ v, t })).filter((x) => x.v > 0).sort((a, b) => a.t - b.t);
+      html += `<div class="crow"><div class="lab">${r.b}-${r.s}</div>
+        <div class="stack${n ? "" : " empty"}">${segs.map((x) => {
+          const p = pct(x.v, n);
+          return `<div class="seg2" style="flex-grow:${x.v};background:${colors[x.t]}" data-tip="${esc(D.types[x.t])}|${x.v}|${p.toFixed(1)}|${r.b}-${r.s}">${p >= 12 ? Math.round(p) + "%" : ""}</div>`;
+        }).join("")}</div>
+        <div class="n">${n ? fmt(n) + "구" : "–"}</div></div>`;
+    }
+  }
+  $("counts").innerHTML = html;
+}
+
+function renderLegend(agg) {
+  const present = agg.by.map((a, t) => ({ t, n: a.n })).filter((x) => x.n > 0);
+  $("legend").innerHTML = present.map((x) => `<button type="button" class="chip" data-t="${x.t}" aria-pressed="${!state.hidden.has(x.t)}"><span class="dot" style="background:${colors[x.t]}"></span>${esc(D.types[x.t])}<em>${fmt(x.n)}</em></button>`).join("");
+}
+
+/* ---------- 스트라이크존 캔버스 ---------- */
+const XR = [-2.5, 2.5], ZR = [-0.2, 5.2];
+let zoneCtx, zoneW = 0, zoneH = 0, zonePts = [];
+function setupZone() {
+  const box = $("zonebox"), cv = $("zone");
+  zoneCtx = cv.getContext("2d");
+  const ro = new ResizeObserver(() => {
+    const r = box.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    zoneW = r.width; zoneH = r.height;
+    cv.width = Math.round(zoneW * dpr); cv.height = Math.round(zoneH * dpr);
+    zoneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawZone();
+  });
+  ro.observe(box);
+  cv.addEventListener("mousemove", zoneHover);
+  cv.addEventListener("mouseleave", hideTip);
+  $("legend").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip"); if (!c) return;
+    const t = +c.dataset.t;
+    state.hidden.has(t) ? state.hidden.delete(t) : state.hidden.add(t);
+    c.setAttribute("aria-pressed", String(!state.hidden.has(t)));
+    drawZone();
+  });
+}
+const sx = (x) => (x - XR[0]) / (XR[1] - XR[0]) * zoneW;
+const sz = (z) => zoneH - (z - ZR[0]) / (ZR[1] - ZR[0]) * zoneH;
+
+function drawZone() {
+  if (!zoneCtx || !zoneW) return;
+  const ctx = zoneCtx, cs = getComputedStyle(document.documentElement);
+  const ink = cs.getPropertyValue("--zone").trim(), faint = cs.getPropertyValue("--line").trim(), surface = cs.getPropertyValue("--surface").trim(), muted = cs.getPropertyValue("--muted").trim();
+  ctx.clearRect(0, 0, zoneW, zoneH);
+  const [zb, zt] = D.meta.zone, hw = 17 / 24;
+  // 존 9분할 보조선
+  ctx.strokeStyle = faint; ctx.lineWidth = 1;
+  for (let k = 1; k < 3; k++) {
+    const x = -hw + (2 * hw) * k / 3, z = zb + (zt - zb) * k / 3;
+    ctx.beginPath(); ctx.moveTo(sx(x), sz(zb)); ctx.lineTo(sx(x), sz(zt)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx(-hw), sz(z)); ctx.lineTo(sx(hw), sz(z)); ctx.stroke();
+  }
+  // 홈플레이트 (포수 시점)
+  const py = sz(0.05);
+  ctx.fillStyle = faint;
+  ctx.beginPath(); ctx.moveTo(sx(-hw), py); ctx.lineTo(sx(hw), py); ctx.lineTo(sx(hw), py + 5); ctx.lineTo(sx(0), py + 12); ctx.lineTo(sx(-hw), py + 5); ctx.closePath(); ctx.fill();
+
+  // 투구 점
+  const pts = [];
+  for (const i of sel) {
+    if (X[i] === -32768 || Z[i] === -32768 || state.hidden.has(T[i])) continue;
+    pts.push(i);
+  }
+  zonePts = pts;
+  const many = pts.length > 4000;
+  const r = pts.length > 20000 ? 2 : pts.length > 4000 ? 2.6 : 4.2;
+  ctx.globalAlpha = pts.length > 20000 ? 0.28 : pts.length > 4000 ? 0.5 : 0.85;
+  for (const i of pts) {
+    const x = sx(X[i] / 100), y = sz(Z[i] / 100);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = colors[T[i]]; ctx.fill();
+    if (!many) { ctx.lineWidth = 1; ctx.strokeStyle = surface; ctx.stroke(); }
+  }
+  ctx.globalAlpha = 1;
+  // 스트라이크존 외곽은 점 위에
+  ctx.strokeStyle = ink; ctx.lineWidth = 2;
+  ctx.strokeRect(sx(-hw), sz(zt), sx(hw) - sx(-hw), sz(zb) - sz(zt));
+  ctx.fillStyle = muted; ctx.font = "11px " + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = "left"; ctx.fillText(`${fmt(pts.length)}구 표시`, 6, 14);
+}
+
+function zoneHover(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let best = -1, bd = 64;
+  for (const i of zonePts) {
+    const dx = sx(X[i] / 100) - mx, dy = sz(Z[i] / 100) - my, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = i; }
+  }
+  if (best < 0) return hideTip();
+  const s = S[best], p = D.pitchers[P[best]], b = D.batters[B[best]];
+  const bs = bases(s);
+  const runners = bs ? ["1", "2", "3"].filter((_, k) => bs >> k & 1).join("·") + "루" : "주자 없음";
+  showTip(e.clientX, e.clientY, `<b>${esc(D.types[T[best]])} ${V[best] || "–"}km/h</b> · ${RESULT_LABEL[D.results[result(s)]] || "–"}<br>
+    ${esc(p[0])} → ${esc(b[0])} (${lefty(s) ? "좌" : "우"}타)<br>
+    <span class="m">${balls(s)}-${strikes(s)} · ${outs(s)}아웃 · ${runners}<br>${D.dates[DT[best]]}</span>`);
+}
+
+const tip = $("tip");
+function showTip(x, y, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let left = x + 14, top = y + 14;
+  if (left + w > window.innerWidth - 8) left = x - w - 14;
+  if (top + h > window.innerHeight - 8) top = y - h - 14;
+  tip.style.left = Math.max(8, left) + "px"; tip.style.top = Math.max(8, top) + "px";
+}
+function hideTip() { tip.hidden = true; }
+document.addEventListener("mouseover", (e) => {
+  const seg = e.target.closest && e.target.closest("[data-tip]");
+  if (!seg) return;
+  const [t, v, p, c] = seg.dataset.tip.split("|");
+  const move = (ev) => showTip(ev.clientX, ev.clientY, `<b>${esc(t)}</b> · ${c} 카운트<br><span class="m">${fmt(+v)}구 · ${p}%</span>`);
+  move(e);
+  seg.addEventListener("mousemove", move);
+  seg.addEventListener("mouseleave", () => { seg.removeEventListener("mousemove", move); hideTip(); }, { once: true });
+});
+
+function update() {
+  filter();
+  const agg = aggregate();
+  renderStatline(agg); renderMix(agg); renderCounts(agg); renderLegend(agg); drawZone();
+}
+
+function onTheme() { if (!D) return; readColors(); update(); }
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", onTheme);
+new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+fetch("pitches.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((data) => {
+  decode(data);
+  readColors();
+  $("season").textContent = `${data.dates[0]} ~ ${data.dates[data.dates.length - 1]} · ${fmt(data.meta.games)}경기 · ${fmt(N)}구`;
+  fillTeams(); fillCounts(); fillMonths();
+  // 첫 화면: 가장 많이 던진 투수
+  let top = 0; for (let i = 1; i < pitchCount.length; i++) if (pitchCount[i] > pitchCount[top]) top = i;
+  state.pitcher = String(top);
+  shell(); bindControls(); syncControls(); update();
+}).catch((err) => {
+  $("main").innerHTML = `<div class="state">투구 데이터(pitches.json)를 불러오지 못했습니다 (${esc(err.message)}). 같은 폴더에서 <code>python -m http.server</code>로 열어 주세요.</div>`;
+});
+})();
+</script>
