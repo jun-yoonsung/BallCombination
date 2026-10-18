@@ -12,7 +12,9 @@ import math
 PITCH_COLUMNS = [
     "game_id", "inning", "half", "seqno", "pitch_num",
     "pitcher_id", "pitcher_name", "batter_id", "batter_name", "stance",
-    "balls", "strikes", "outs", "pitch_result", "pitch_type", "speed_kmh",
+    "balls", "strikes", "outs", "on_1b", "on_2b", "on_3b",
+    "away_score", "home_score", "score_diff",
+    "pitch_result", "pitch_type", "speed_kmh",
     "plate_x", "plate_z", "sz_top", "sz_bot",
     "x0", "y0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az",
     "pts_pitch_id", "text",
@@ -83,47 +85,73 @@ def is_pitch(opt):
     return bool(opt.get("ptsPitchId") or opt.get("stuff") or (opt.get("pitchNum") or 0) > 0)
 
 
+def _on_base(v):
+    # base1~3 값은 0이면 빈 루, 아니면 그 주자의 타순 번호
+    n = _num(v)
+    return None if n is None else int(bool(n))
+
+
 def parse_relay(data, game_id, inning, names=None):
-    """relay 응답 하나(한 이닝)를 투구 행 리스트로 변환한다."""
+    """relay 응답 하나(한 이닝)를 투구 행 리스트로 변환한다.
+
+    currentGameState는 해당 이벤트 '이후' 상태이므로, 투구 직전 상황(카운트, 아웃, 주자, 점수)은
+    seqno 순으로 바로 앞 이벤트의 상태를 쓴다.
+    """
     names = names if names is not None else player_names(data)
     relays = (_result(data).get("textRelayData") or {}).get("textRelays") or []
-    rows = []
+    events = []
     for relay in relays:
         pts = {str(p.get("pitchId")): p for p in relay.get("ptsOptions") or []}
-        # homeOrAway "0" = 원정팀 공격(초), "1" = 홈팀 공격(말)
-        hoa = str(relay.get("homeOrAway", ""))
-        half = {"0": "top", "1": "bottom"}.get(hoa)
         for opt in relay.get("textOptions") or []:
-            if not is_pitch(opt):
-                continue
-            state = opt.get("currentGameState") or {}
-            pitcher_id = state.get("pitcher")
-            batter_id = state.get("batter")
-            p = pts.get(str(opt.get("ptsPitchId")), {})
-            row = {
-                "game_id": game_id,
-                "inning": relay.get("inn", inning),
-                "half": half,
-                "seqno": opt.get("seqno"),
-                "pitch_num": opt.get("pitchNum"),
-                "pitcher_id": pitcher_id,
-                "pitcher_name": names.get(str(pitcher_id)),
-                "batter_id": batter_id,
-                "batter_name": names.get(str(batter_id)),
-                "balls": _num(state.get("ball")),
-                "strikes": _num(state.get("strike")),
-                "outs": _num(state.get("out")),
-                "pitch_result": opt.get("pitchResult"),
-                "pitch_type": opt.get("stuff"),
-                "speed_kmh": _num(opt.get("speed")),
-                "pts_pitch_id": opt.get("ptsPitchId"),
-                "text": opt.get("text"),
-            }
-            for src, dst in PTS_FIELDS.items():
-                row[dst] = _num(p.get(src)) if src != "stance" else p.get(src)
-            row["plate_z"] = plate_z(p)
-            rows.append(row)
-    rows.sort(key=lambda r: (r["seqno"] is None, r["seqno"] or 0))
+            events.append((opt.get("seqno") or 0, relay, opt, pts))
+    events.sort(key=lambda e: e[0])
+
+    rows = []
+    prev = None
+    for _, relay, opt, pts in events:
+        state = opt.get("currentGameState") or {}
+        before = prev if prev is not None else state
+        prev = state
+        if not is_pitch(opt):
+            continue
+        # homeOrAway "0" = 원정팀 공격(초), "1" = 홈팀 공격(말)
+        half = {"0": "top", "1": "bottom"}.get(str(relay.get("homeOrAway", "")))
+        pitcher_id = state.get("pitcher")
+        batter_id = state.get("batter")
+        away, home = _num(before.get("awayScore")), _num(before.get("homeScore"))
+        score_diff = None
+        if half and away is not None and home is not None:
+            score_diff = home - away if half == "top" else away - home
+        p = pts.get(str(opt.get("ptsPitchId")), {})
+        row = {
+            "game_id": game_id,
+            "inning": relay.get("inn", inning),
+            "half": half,
+            "seqno": opt.get("seqno"),
+            "pitch_num": opt.get("pitchNum"),
+            "pitcher_id": pitcher_id,
+            "pitcher_name": names.get(str(pitcher_id)),
+            "batter_id": batter_id,
+            "batter_name": names.get(str(batter_id)),
+            "balls": _num(before.get("ball")),
+            "strikes": _num(before.get("strike")),
+            "outs": _num(before.get("out")),
+            "on_1b": _on_base(before.get("base1")),
+            "on_2b": _on_base(before.get("base2")),
+            "on_3b": _on_base(before.get("base3")),
+            "away_score": away,
+            "home_score": home,
+            "score_diff": score_diff,
+            "pitch_result": opt.get("pitchResult"),
+            "pitch_type": opt.get("stuff"),
+            "speed_kmh": _num(opt.get("speed")),
+            "pts_pitch_id": opt.get("ptsPitchId"),
+            "text": opt.get("text"),
+        }
+        for src, dst in PTS_FIELDS.items():
+            row[dst] = _num(p.get(src)) if src != "stance" else p.get(src)
+        row["plate_z"] = plate_z(p)
+        rows.append(row)
     return rows
 
 

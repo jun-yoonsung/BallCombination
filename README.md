@@ -35,7 +35,10 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 | `round_code` | `kbo_r` 정규시즌, `kbo_ps_*` 포스트시즌(`wd` 와일드카드, `sp` 준플레이오프 등) |
 | `inning`, `half` | 이닝, `top`(초) / `bottom`(말) |
 | `pitcher_id/name`, `batter_id/name`, `stance` | 투수, 타자, 타자 타석(L/R) |
-| `balls`, `strikes`, `outs` | 해당 투구 **후** 카운트 |
+| `balls`, `strikes`, `outs` | 투구 **직전** 볼카운트, 아웃 수 |
+| `on_1b`, `on_2b`, `on_3b` | 투구 직전 1·2·3루 주자 유무 (1/0) |
+| `away_score`, `home_score` | 투구 직전 점수 |
+| `score_diff` | 투구 직전 점수차, **투수팀 기준** (+면 투수팀이 앞섬) |
 | `pitch_num`, `pitch_result` | 타석 내 투구 번호, 결과 코드(B 볼, T 루킹 스트라이크, S 헛스윙, F 파울, H 타격 등) |
 | `pitch_type`, `speed_kmh` | 구종, 구속(km/h) |
 | `plate_x`, `plate_z` | 홈플레이트 통과 위치(좌우, 지면으로부터 높이). 단위 ft, PITCHf/x 좌표계 |
@@ -48,7 +51,9 @@ python -m kbo_crawler.crawl --game 20250920LGSS02025
 1. `GET https://api-gw.sports.naver.com/schedule/games?...&categoryId=kbo` 로 기간 내 경기 목록 조회
 2. 경기마다 `GET /schedule/games/{gameId}/relay?inning=N` 을 1회부터 호출 (연장까지, 데이터가 없으면 중단)
 3. 응답의 `textOptions`(구종/구속/카운트)와 `ptsOptions`(투구 추적 좌표)를 `ptsPitchId`로 매칭해서 한 행으로 만듦
-4. `ptsOptions.crossPlateY`는 높이가 아니라 홈플레이트 앞면까지의 거리(항상 약 0.708ft)이므로,
+4. `currentGameState`는 이벤트 **이후** 상태이므로, 투구 직전 상황(카운트, 아웃, 주자, 점수)은
+   seqno 순으로 바로 앞 이벤트(타자 등장, 도루, 피치클락 위반 등 포함)의 상태를 사용
+5. `ptsOptions.crossPlateY`는 높이가 아니라 홈플레이트 앞면까지의 거리(항상 약 0.708ft)이므로,
    투구 높이 `plate_z`는 궤적 파라미터(`y0, vy0, ay, z0, vz0, az`)로 홈플레이트 통과 시점을 구해 계산함
    (같은 방식으로 계산한 x가 네이버의 `crossPlateX`와 일치하는 것을 확인)
 

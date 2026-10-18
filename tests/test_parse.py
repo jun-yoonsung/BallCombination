@@ -26,9 +26,23 @@ class ParseRelayTest(unittest.TestCase):
         self.assertEqual(first["half"], "top")
         self.assertEqual((first["pitcher_name"], first["batter_name"]), ("고영표", "황영묵"))
         self.assertEqual((first["pitch_type"], first["speed_kmh"], first["pitch_result"]), ("투심", 134, "S"))
-        self.assertEqual((first["balls"], first["strikes"], first["outs"]), (0, 1, 0))
+        self.assertEqual((first["balls"], first["strikes"], first["outs"]), (0, 0, 0))
         self.assertEqual(first["plate_x"], -0.5331)
         self.assertAlmostEqual(first["plate_z"], 1.0893, places=3)
+
+    def test_pre_pitch_situation(self):
+        by_seq = {r["seqno"]: r for r in self.rows}
+        # 3루타 이후 무사 3루, 볼 1개 뒤의 공
+        r = by_seq[7]
+        self.assertEqual((r["balls"], r["strikes"], r["outs"], r["on_1b"], r["on_2b"], r["on_3b"]), (1, 0, 0, 0, 0, 1))
+        # 피치클락 위반 스트라이크 직후, 무사 1·2루
+        r = by_seq[40]
+        self.assertEqual((r["balls"], r["strikes"], r["on_1b"], r["on_2b"], r["on_3b"]), (0, 1, 1, 1, 0))
+        # 3점 홈런 이후: 투수팀(원정 한화) 기준 0-3
+        r = by_seq[46]
+        self.assertEqual((r["away_score"], r["home_score"], r["score_diff"]), (0, 3, -3))
+        # 원정 투수가 던진 1회초에는 홈팀 기준 점수차
+        self.assertEqual(by_seq[2]["score_diff"], 0)
 
     def test_last_pitch_is_bottom_half(self):
         last = self.rows[-1]
