@@ -1,1 +1,61 @@
 # BallCombination
+
+네이버 스포츠 KBO 문자중계에서 **투구 단위 데이터(구종, 구속, 투구 위치, 궤적)** 를 수집하는 크롤러.
+
+## 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+## 사용법
+
+```bash
+# 기간 지정: 해당 기간에 종료된 KBO 경기를 모두 수집
+python -m kbo_crawler.crawl --from 2025-09-01 --to 2025-09-07 --out data/pitches_0901_0907.csv
+
+# 경기 지정 (gameId는 네이버 경기 URL에 있는 값, 예: 20250920LGSS02025)
+python -m kbo_crawler.crawl --game 20250920LGSS02025
+```
+
+| 옵션 | 기본값 | 설명 |
+|---|---|---|
+| `--from` / `--to` | | 수집 기간 (YYYY-MM-DD) |
+| `--game` | | gameId 직접 지정, 여러 번 사용 가능 |
+| `--out` | `data/pitches.csv` | 출력 CSV (Excel에서 한글이 깨지지 않게 UTF-8 BOM으로 저장) |
+| `--cache` | `data/raw` | API 원본 JSON 캐시. 다시 실행하면 캐시를 재사용 |
+| `--delay` | `0.7` | 요청 간 최소 간격(초) |
+
+## 출력 컬럼
+
+| 컬럼 | 설명 |
+|---|---|
+| `game_id`, `game_date`, `away_team`, `home_team` | 경기 정보 |
+| `inning`, `half` | 이닝, `top`(초) / `bottom`(말) |
+| `pitcher_id/name`, `batter_id/name`, `stance` | 투수, 타자, 타자 타석(L/R) |
+| `balls`, `strikes`, `outs` | 해당 투구 **후** 카운트 |
+| `pitch_num`, `pitch_result` | 타석 내 투구 번호, 결과 코드(B 볼, T 스트라이크, F 파울, H 타격 등) |
+| `pitch_type`, `speed_kmh` | 구종, 구속(km/h) |
+| `plate_x`, `plate_z` | 홈플레이트 통과 위치(좌우, 높이). 단위는 ft로 추정 |
+| `sz_top`, `sz_bot` | 해당 타자 스트라이크존 상단/하단 |
+| `x0..az` | 궤적 파라미터(초기 위치·속도·가속도) |
+| `text` | 문자중계 원문 |
+
+## 동작 방식
+
+1. `GET https://api-gw.sports.naver.com/schedule/games?...&categoryId=kbo` 로 기간 내 경기 목록 조회
+2. 경기마다 `GET /schedule/games/{gameId}/relay?inning=N` 을 1회부터 호출 (연장까지, 데이터가 없으면 중단)
+3. 응답의 `textOptions`(구종/구속/카운트)와 `ptsOptions`(투구 추적 좌표)를 `ptsPitchId`로 매칭해서 한 행으로 만듦
+
+## 주의
+
+- 네이버의 **비공식 내부 API**입니다. 응답 구조가 바뀌면 `kbo_crawler/parse.py`를 수정해야 합니다.
+  원본 JSON이 `data/raw/{gameId}/` 에 남아 있으니 브라우저 개발자도구(Network 탭에서 `relay` 검색)와 비교해서 고치면 됩니다.
+- 요청 간격을 너무 줄이지 마세요. 시즌 전체(약 720경기)는 1만 회 가까운 요청이 나갑니다.
+- 수집한 데이터는 개인 분석이나 연구 용도로 쓰고, 재배포나 상업적 이용은 네이버 이용약관을 확인하세요.
+
+## 테스트
+
+```bash
+python -m unittest -v
+```

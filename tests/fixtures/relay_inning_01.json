@@ -1,0 +1,45 @@
+{
+  "code": 200,
+  "success": true,
+  "result": {
+    "textRelayData": {
+      "textRelays": [
+        {
+          "no": 2, "inn": 1, "homeOrAway": "1", "title": "1번타자 김타자",
+          "textOptions": [
+            {"seqno": 10, "type": 8, "text": "1번타자 김타자", "pitchNum": 0},
+            {"seqno": 11, "type": 1, "text": "1구 스트라이크", "pitchNum": 1, "pitchResult": "T",
+             "ptsPitchId": "250920_183900", "speed": "131", "stuff": "슬라이더",
+             "currentGameState": {"ball": 0, "strike": 1, "out": 0, "pitcher": "60001", "batter": "70002"}}
+          ],
+          "ptsOptions": [
+            {"pitchId": "250920_183900", "inn": 1, "ballcount": 1, "crossPlateX": -0.42, "crossPlateY": 1.9,
+             "topSz": 3.4, "bottomSz": 1.55, "x0": -1.8, "y0": 50.0, "z0": 5.9,
+             "vx0": 4.1, "vy0": -120.3, "vz0": -3.2, "ax": 6.0, "ay": 24.1, "az": -30.5, "stance": "L"}
+          ]
+        },
+        {
+          "no": 1, "inn": 1, "homeOrAway": "0", "title": "1번타자 이타자",
+          "textOptions": [
+            {"seqno": 1, "type": 8, "text": "1번타자 이타자", "pitchNum": 0},
+            {"seqno": 2, "type": 1, "text": "1구 볼", "pitchNum": 1, "pitchResult": "B",
+             "ptsPitchId": "250920_183512", "speed": "148", "stuff": "직구",
+             "currentGameState": {"ball": 1, "strike": 0, "out": 0, "pitcher": "50001", "batter": "70001"}},
+            {"seqno": 3, "type": 1, "text": "2구 타격", "pitchNum": 2, "pitchResult": "H",
+             "ptsPitchId": "250920_183540", "speed": "139", "stuff": "포크",
+             "currentGameState": {"ball": 1, "strike": 0, "out": 1, "pitcher": "50001", "batter": "70001"}},
+            {"seqno": 4, "type": 13, "text": "이타자 : 유격수 땅볼 아웃", "pitchNum": 0}
+          ],
+          "ptsOptions": [
+            {"pitchId": "250920_183512", "crossPlateX": 0.81, "crossPlateY": 2.75, "topSz": 3.3,
+             "bottomSz": 1.6, "stance": "R"},
+            {"pitchId": "250920_183540", "crossPlateX": 0.1, "crossPlateY": 1.2, "topSz": 3.3,
+             "bottomSz": 1.6, "stance": "R"}
+          ]
+        }
+      ]
+    },
+    "homeLineup": {"pitcher": [{"pcode": "60001", "name": "박투수"}], "batter": [{"pcode": "70002", "name": "김타자"}]},
+    "awayLineup": {"pitcher": [{"pcode": "50001", "name": "최투수"}], "batter": [{"pcode": "70001", "name": "이타자"}]}
+  }
+}
