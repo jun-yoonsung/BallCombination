@@ -16,7 +16,8 @@
   rv는 투구 가치(타자 기준 득점 x1000). model에는 예측 상수, 타자별 구종 보정, 검증 성능이 들어간다.
 
 궤적 파라미터는 용량이 커서 투수의 마지막 소속팀별로 traj/{팀 인덱스}.json에 따로 저장하고,
-웹에서는 그 팀 투수를 볼 때만 불러온다. y0는 항상 50ft라서 저장하지 않는다.
+웹에서는 그 팀 투수를 볼 때만 불러온다. y0(측정 시작 지점)는 2026년 7월 중순 50ft에서 55ft로 바뀌었으므로
+공마다 저장해야 한다.
 """
 
 import argparse
@@ -30,7 +31,7 @@ from . import predict
 from .physics import from_row, movement
 
 ZONE_TOP, ZONE_BOT = 3.33, 1.61
-TRAJ_KEYS = ("x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az")  # 1/100 단위 정수로 저장
+TRAJ_KEYS = ("x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az", "y0")  # 1/100 단위 정수로 저장
 RESULTS = ["B", "T", "S", "F", "H", "W", "V"]
 PA_RESULTS = ["삼진", "볼넷", "고의4구", "사구", "1루타", "2루타", "3루타", "홈런", "땅볼", "플라이",
               "라인드라이브", "병살타", "희생번트", "희생플라이", "실책출루", "야수선택", "번트아웃", "기타"]
@@ -151,7 +152,6 @@ def build(paths):
             "games": len({r["game_id"] for r in rows}),
             "zone": [ZONE_BOT, ZONE_TOP],
             "packed": "balls:2 strikes:2 outs:2 bases:3 lefty:1 result:4 post:1",
-            "traj_y0": 50.0,
         },
         "teams": teams.items,
         "types": type_names,
@@ -169,6 +169,7 @@ def build(paths):
             "zone_box": [predict.ZONE_BOT, predict.ZONE_TOP, predict.ZONE_HALF_W],
             "batter_ratio": batter_ratio,
             "count_value": {k: round(v, 4) for k, v in run_value["count_value"].items()},
+            "pa_value": {k: round(v, 4) for k, v in run_value["weights"].items()},
             "eval": {k: ev[k] for k in ("split", "n_train", "n_test", "type", "zone")},
         },
     }

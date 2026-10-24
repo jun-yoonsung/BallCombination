@@ -275,6 +275,46 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 .caveat { font-size: 12px; color: var(--muted); margin: 12px 0 0; max-width: 80ch; }
 .empty-state { padding: 36px 16px; text-align: center; color: var(--muted); }
 
+/* 시뮬레이션 */
+.sim-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-bottom: 14px; }
+.matchup { font-weight: 700; font-size: 17px; }
+.matchup span { color: var(--muted); font-weight: 500; margin: 0 6px; }
+.lamps { display: flex; gap: 14px; font-family: var(--font-data); font-size: 12px; font-weight: 600; color: var(--muted); }
+.lamps div { display: flex; align-items: center; gap: 5px; }
+.lamps i { width: 12px; height: 12px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); transition: background 0.25s, box-shadow 0.25s; }
+.lamps .b i.on { background: var(--pt-ch); border-color: var(--pt-ch); box-shadow: 0 0 8px var(--pt-ch); }
+.lamps .s i.on { background: var(--pt-fc); border-color: var(--pt-fc); box-shadow: 0 0 8px var(--pt-fc); }
+.sim-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.btn2 { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; transition: transform 0.1s, border-color 0.2s; }
+.btn2:hover { border-color: var(--ink); }
+.btn2:active { transform: scale(0.96); }
+.btn2[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn2:disabled { opacity: 0.4; cursor: not-allowed; }
+.simgrid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 900px) { .simgrid { grid-template-columns: minmax(0, 1fr); } }
+.simstage { position: relative; aspect-ratio: 4 / 3.4; width: 100%; border-radius: 12px; background: var(--surface-2); overflow: hidden; }
+.simstage canvas { width: 100%; height: 100%; display: block; }
+.banner { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -50%) scale(1); padding: 12px 26px; border-radius: 14px; color: #fff;
+  font-family: var(--font-display); font-size: 34px; letter-spacing: 0.02em; box-shadow: var(--shadow); pointer-events: none; white-space: nowrap; }
+.banner.pop { animation: pop 0.5s var(--ease); }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } 70% { transform: translate(-50%, -50%) scale(1.08); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.pitchlog { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; align-content: start; max-height: 420px; overflow-y: auto; }
+.pitchlog li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; animation: rise 0.35s var(--ease); }
+.pitchlog .no { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-family: var(--font-data); font-size: 12px; font-weight: 700; }
+.pitchlog .what { min-width: 0; }
+.pitchlog .what small { display: block; color: var(--muted); font-size: 12px; }
+.pitchlog .cnt { font-family: var(--font-data); font-weight: 700; font-size: 13px; }
+.pitchlog .hint { color: var(--muted); background: none; text-align: center; display: block; padding: 24px 8px; animation: none; }
+.simres { display: grid; gap: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.kpi b { font-family: var(--font-data); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi i { font-style: normal; font-size: 12px; color: var(--muted); }
+.kpi .d { font-family: var(--font-data); font-size: 12px; font-weight: 600; }
+.d.good { color: var(--pt-ch); } .d.bad { color: var(--accent); }
+.running { color: var(--muted); font-size: 13px; }
+
 .tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 12px; box-shadow: var(--shadow); max-width: 260px; }
 .tip b { font-weight: 700; }
 .tip .m { font-family: var(--font-data); color: var(--muted); }
@@ -299,6 +339,7 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 <div class="tip" id="tip" hidden></div>
 
 <script src="predict.js"></script>
+<script src="simulate.js"></script>
 <script>
 (() => {
 "use strict";
@@ -494,6 +535,7 @@ function shell() {
     <div class="tablist" role="tablist" id="tablist">
       <button type="button" class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">개요</button>
       <button type="button" class="tab" role="tab" id="tab-predict" aria-controls="predict" aria-selected="false" data-tab="predict">다음 공 예측</button>
+      <button type="button" class="tab" role="tab" id="tab-sim" aria-controls="sim" aria-selected="false" data-tab="sim">시뮬레이션</button>
       <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">궤적 · 무브먼트</button>
       <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">터널링</button>
       <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">카운트별 볼배합</button>
@@ -524,11 +566,59 @@ function shell() {
     </div>
   </section>
 
+  <section class="tabpanel" role="tabpanel" id="sim" aria-labelledby="tab-sim" hidden>
+    <div class="pred" id="sim-root">
+      <aside class="panel pred-set" aria-labelledby="h-sset">
+        <h2 id="h-sset">맞대결 설정</h2>
+        <p class="sub" id="sset-who" style="margin:0"></p>
+        <div class="field"><label for="sim-batter">타자</label><select id="sim-batter"></select></div>
+        <div class="field"><span class="flabel" id="l-sim-stance">타자 타석</span>
+          <div class="seg" id="sim-stance" role="group" aria-labelledby="l-sim-stance">
+            <button type="button" data-v="0" aria-pressed="true">우타</button><button type="button" data-v="1" aria-pressed="false">좌타</button>
+          </div></div>
+        <div class="field"><label for="sim-first">볼배합 가정 · 초구</label><select id="sim-first"></select></div>
+        <div class="field"><label for="sim-two">볼배합 가정 · 2스트라이크 이후</label><select id="sim-two"></select></div>
+        <div class="field"><span class="flabel" id="l-sim-n">돌릴 타석 수</span>
+          <div class="seg" id="sim-n" role="group" aria-labelledby="l-sim-n">
+            <button type="button" data-v="1000" aria-pressed="true">1,000</button><button type="button" data-v="5000" aria-pressed="false">5,000</button><button type="button" data-v="20000" aria-pressed="false">20,000</button>
+          </div></div>
+        <p class="caveat" style="margin:0">볼배합 가정을 정하면 그 상황에서는 그 구종만 던집니다. 타자가 그걸 알고 노리는 효과는 반영되지 않으므로, 실제보다 가정 쪽이 유리하게 나올 수 있습니다.</p>
+      </aside>
+      <div class="pred-out">
+        <section class="panel" aria-labelledby="h-live">
+          <h2 id="h-live">한 타석 중계</h2>
+          <p class="sub">공 하나마다 구종 → 코스 → 결과를 확률대로 뽑고, 그 투수가 실제로 던졌던 같은 구종·코스의 공 하나로 구속과 궤적을 보여줍니다.</p>
+          <div class="sim-head">
+            <div class="matchup" id="sim-matchup"></div>
+            <div class="lamps" aria-live="polite"><div class="b">B <i></i><i></i><i></i></div><div class="s">S <i></i><i></i></div><div id="sim-pc">0구</div></div>
+            <div class="sim-btns">
+              <button type="button" class="playbtn" id="sim-new"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>새 타석</button>
+              <button type="button" class="btn2" id="sim-next" disabled>다음 공</button>
+              <button type="button" class="btn2" id="sim-auto" aria-pressed="true">자동 진행</button>
+            </div>
+          </div>
+          <div class="simgrid">
+            <div class="simstage" id="simbox"><canvas id="simcv" role="img" aria-label="시뮬레이션 투구 (포수 시점)"></canvas><div class="banner" id="sim-banner" hidden></div></div>
+            <ol class="pitchlog" id="sim-log"><li class="hint">‘새 타석’을 누르면 공 하나씩 진행됩니다.</li></ol>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="h-batch">
+          <div class="phead">
+            <div><h2 id="h-batch">여러 타석 돌리기</h2>
+            <p class="sub">같은 맞대결을 여러 번 시뮬레이션해서 결과 분포를 봅니다. 실제 시즌 기록과, 볼배합 가정을 넣었다면 ‘모델대로 던졌을 때’와 나란히 비교합니다.</p></div>
+            <button type="button" class="playbtn" id="sim-run">시뮬레이션 실행</button>
+          </div>
+          <div id="sim-out" class="simres"><div class="empty-state">‘시뮬레이션 실행’을 누르면 결과가 나옵니다.</div></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
   <section class="tabpanel" role="tabpanel" id="trajectory" aria-labelledby="tab-trajectory" hidden>
     <section class="panel" aria-labelledby="h-traj">
       <div class="phead">
         <div><h2 id="h-traj">투구 궤적</h2>
-        <p class="sub">측정 시작(홈에서 50ft)부터 홈플레이트까지. 그 앞 릴리스 구간(점선)은 같은 식으로 이어 그린 추정입니다.</p></div>
+        <p class="sub">측정 시작 지점(홈에서 50ft, 7월 중순 이후 55ft)부터 홈플레이트까지. 그보다 앞의 릴리스 구간(점선)은 같은 식으로 이어 그린 추정입니다.</p></div>
         <div class="ctrls">
           <div class="seg" id="traj-view" role="group" aria-label="시점">
             <button type="button" data-v="catcher" aria-pressed="true">포수 시점</button><button type="button" data-v="side" aria-pressed="false">옆</button><button type="button" data-v="top" aria-pressed="false">위</button>
@@ -1016,10 +1106,11 @@ document.addEventListener("mouseover", (e) => {
 });
 
 /* ---------- 투구 궤적 ---------- */
-// 궤적 파라미터 [x0, z0, vx0, vy0, vz0, ax, ay, az], y0 = 50ft. 위치 = r0 + v0 t + a t^2 / 2
-const TK = ["x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az"];
-const Y0 = 50, Y_PLATE = 17 / 12, Y_RELEASE = 54.5, Y_RUBBER = 60.5;
-let TR = null;  // Float32Array(N * 8), 아직 안 불러온 투구는 NaN
+// 궤적 파라미터 [x0, z0, vx0, vy0, vz0, ax, ay, az, y0]. 위치 = r0 + v0 t + a t^2 / 2
+// y0(측정 시작 지점)는 2026년 7월 중순 50ft에서 55ft로 바뀌어 공마다 다르다.
+const TK = ["x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az", "y0"], NP = TK.length;
+const Y_PLATE = 17 / 12, Y_RELEASE = 54.5, Y_RUBBER = 60.5;
+let TR = null;  // Float32Array(N * NP), 아직 안 불러온 투구는 NaN
 const trajLoaded = new Map();
 let trajView = "catcher", trajMode = "avg", trajStatus = "", trajSpeed = 0.25, anim = null;
 let tunBase = null, tunComp = null, tunCtx, tunW = 0, tunH = 0, sepCtx, sepW = 0, sepH = 0;
@@ -1065,8 +1156,8 @@ function trajTeam() {
 function ensureTraj(team) {
   if (!trajLoaded.has(team)) {
     const pr = fetch(`traj/${team}.json`).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((t) => {
-      if (!TR) TR = new Float32Array(N * 8).fill(NaN);
-      t.i.forEach((gi, k) => { for (let j = 0; j < 8; j++) TR[gi * 8 + j] = t[TK[j]][k] / 100; });
+      if (!TR) TR = new Float32Array(N * NP).fill(NaN);
+      t.i.forEach((gi, k) => { for (let j = 0; j < NP; j++) TR[gi * NP + j] = t[TK[j]][k] / 100; });
     });
     pr.catch(() => trajLoaded.delete(team));
     trajLoaded.set(team, pr);
@@ -1098,19 +1189,19 @@ function playTraj() {
 
 /* 선택된 투구로 구종별 평균 궤적 파라미터를 구한다. */
 function typeMeans(respectHidden) {
-  const p = new Float32Array(8), nt = D.types.length;
-  const sums = Array.from({ length: nt }, () => new Float64Array(9));
+  const p = new Float32Array(NP), nt = D.types.length;
+  const sums = Array.from({ length: nt }, () => new Float64Array(NP + 1));
   for (const i of sel) {
     const t = T[i];
     if ((respectHidden && state.hidden.has(t)) || !trajParams(i, p)) continue;
-    const s = sums[t]; for (let j = 0; j < 8; j++) s[j] += p[j]; s[8]++;
+    const s = sums[t]; for (let j = 0; j < NP; j++) s[j] += p[j]; s[NP]++;
   }
-  return sums.map((s, t) => ({ t, n: s[8], m: s[8] ? Array.from(s.slice(0, 8), (v) => v / s[8]) : null }));
+  return sums.map((s, t) => ({ t, n: s[NP], m: s[NP] ? Array.from(s.slice(0, NP), (v) => v / s[NP]) : null }));
 }
-function posAt(m, t) { return [m[0] + m[2] * t + m[5] * t * t / 2, Y0 + m[3] * t + m[6] * t * t / 2, m[1] + m[4] * t + m[7] * t * t / 2]; }
+function posAt(m, t) { return [m[0] + m[2] * t + m[5] * t * t / 2, m[8] + m[3] * t + m[6] * t * t / 2, m[1] + m[4] * t + m[7] * t * t / 2]; }
 
 function tAtY(p, y) {
-  const a = p[6] / 2, b = p[3], c = Y0 - y, disc = b * b - 4 * a * c;
+  const a = p[6] / 2, b = p[3], c = p[8] - y, disc = b * b - 4 * a * c;
   if (disc < 0 || a === 0) return null;
   return (-b - Math.sqrt(disc)) / (2 * a);
 }
@@ -1120,7 +1211,7 @@ function pathOf(p, steps, tNow = Infinity) {
   const tEnd = Math.min(t1, t0 + tNow), pts = [];
   for (let k = 0; k <= steps; k++) {
     const t = t0 + (tEnd - t0) * k / steps;
-    pts.push([p[0] + p[2] * t + p[5] * t * t / 2, Y0 + p[3] * t + p[6] * t * t / 2, p[1] + p[4] * t + p[7] * t * t / 2]);
+    pts.push(posAt(p, t));
   }
   return pts;
 }
@@ -1136,9 +1227,9 @@ function projector(view, w, h) {
   return ([x, y, z]) => [sx(y), h / 2 - x / 3 * (h / 2 - pad)];  // 위에서 본 모습: 위쪽이 1루
 }
 function trajParams(i, out) {
-  const o = i * 8;
+  const o = i * NP;
   if (!TR || Number.isNaN(TR[o])) return false;
-  for (let j = 0; j < 8; j++) out[j] = TR[o + j];
+  for (let j = 0; j < NP; j++) out[j] = TR[o + j];
   return true;
 }
 
@@ -1180,13 +1271,13 @@ function drawTraj(tNow = Infinity) {
   }
 
   // 데이터: 구종별 평균 궤적 또는 개별 투구
-  const p = new Float32Array(8), nt = D.types.length;
-  const sums = Array.from({ length: nt }, () => new Float64Array(9));
+  const p = new Float32Array(NP), nt = D.types.length;
+  const sums = Array.from({ length: nt }, () => new Float64Array(NP + 1));
   const each = [];
   for (const i of sel) {
     const t = T[i];
     if (state.hidden.has(t) || !trajParams(i, p)) continue;
-    const s = sums[t]; for (let j = 0; j < 8; j++) s[j] += p[j]; s[8]++;
+    const s = sums[t]; for (let j = 0; j < NP; j++) s[j] += p[j]; s[NP]++;
     each.push(i);
   }
   const shown = each.length, stride = Math.max(1, Math.ceil(shown / (playing ? 40 : 300)));
@@ -1205,12 +1296,12 @@ function drawTraj(tNow = Infinity) {
     }
     ctx.globalAlpha = 1;
   } else {
-    const order = sums.map((s, t) => ({ t, n: s[8] })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    const order = sums.map((s, t) => ({ t, n: s[NP] })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
     for (const { t, n } of order) {
-      const m = Array.from(sums[t].slice(0, 8), (v) => v / n);
+      const m = Array.from(sums[t].slice(0, NP), (v) => v / n);
       const pts = pathOf(m, 32, tNow); if (!pts) continue;
-      // 측정 시작(50ft) 이전 추정 구간은 점선
-      const cut = pts.findIndex((q) => q[1] <= Y0);
+      // 측정 시작 지점(y0) 이전 추정 구간은 점선
+      const cut = pts.findIndex((q) => q[1] <= m[8]);
       ctx.strokeStyle = colors[t]; ctx.lineWidth = 3;
       ctx.setLineDash([3, 4]); poly(cut < 0 ? pts : pts.slice(0, cut + 1)); ctx.stroke(); ctx.setLineDash([]);
       if (cut >= 0) { poly(pts.slice(cut)); ctx.stroke(); }
@@ -1394,6 +1485,7 @@ function moveHover(e) {
 }
 
 /* ---------- 다음 공 예측 ---------- */
+const ZNAME = ["존 위·3루쪽", "존 위·가운데", "존 위·1루쪽", "존 가운데·3루쪽", "한가운데", "존 가운데·1루쪽", "존 아래·3루쪽", "존 아래·가운데", "존 아래·1루쪽", "바깥 위·3루쪽", "바깥 위·1루쪽", "바깥 아래·3루쪽", "바깥 아래·1루쪽"];
 let PM = null;  // web/predict.js 모델 (탭을 처음 열 때 만든다)
 const pq = { pitcher: null, batter: -1, stance: 0, balls: 0, strikes: 0, prev: -1, ztype: "all" };
 const ZONE_CELLS = (() => {
@@ -1437,23 +1529,33 @@ function setupPredict() {
 }
 
 // 그 타자가 가장 많이 선 타석 (스위치 타자는 투수 손 반대쪽)
-function batterStance(b) {
+function batterStance(b, pitcher = pq.pitcher) {
   let l = 0, r = 0;
-  const hand = pq.pitcher != null && D.pitchers[pq.pitcher][2] === "L" ? 1 : 0;
+  const hand = pitcher != null && D.pitchers[pitcher][2] === "L" ? 1 : 0;
   for (let i = 0; i < N; i++) if (B[i] === b) { lefty(S[i]) ? l++ : r++; }
   if (l && r && Math.min(l, r) / (l + r) > 0.2) return hand ? 0 : 1;
   return l > r ? 1 : 0;
 }
 
-function fillBatters() {
+function batterOptions(pitcher, noneLabel) {
   const faced = new Map();
-  for (let i = 0; i < N; i++) if (P[i] === pq.pitcher && R[i] >= 0 && (R[i] & 1)) faced.set(B[i], (faced.get(B[i]) || 0) + 1);
+  for (let i = 0; i < N; i++) if (P[i] === pitcher && R[i] >= 0 && (R[i] & 1)) faced.set(B[i], (faced.get(B[i]) || 0) + 1);
   const mine = [...faced].sort((a, b) => b[1] - a[1]);
   const others = D.batters.map((b, i) => [i, b]).filter(([i]) => !faced.has(i)).sort((a, b) => a[1][0].localeCompare(b[1][0], "ko"));
-  $("pq-batter").innerHTML = `<option value="-1">지정 안 함 (타자 보정 없이)</option>` +
+  return `<option value="-1">${noneLabel}</option>` +
     (mine.length ? `<optgroup label="이 투수와 상대한 타자">${mine.map(([i, n]) => `<option value="${i}">${esc(D.batters[i][0])} · ${esc(D.teams[D.batters[i][1]])} (${n}타석)</option>`).join("")}</optgroup>` : "") +
     `<optgroup label="그 밖의 타자">${others.map(([i, b]) => `<option value="${i}">${esc(b[0])} · ${esc(D.teams[b[1]])}</option>`).join("")}</optgroup>`;
+}
+function fillBatters() {
+  $("pq-batter").innerHTML = batterOptions(pq.pitcher, "지정 안 함 (타자 보정 없이)");
   $("pq-batter").value = String(pq.batter);
+}
+// 이 투수가 1% 이상 던진 구종, 많이 던진 순
+function arsenalOf(pitcher) {
+  const used = new Float64Array(D.types.length);
+  for (let i = 0; i < N; i++) if (P[i] === pitcher) used[T[i]]++;
+  const total = used.reduce((a, v) => a + v, 0);
+  return [...used].map((n, t) => ({ t, n })).filter((x) => x.n / total >= 0.01).sort((a, b) => b.n - a.n);
 }
 
 function renderPredict() {
@@ -1516,7 +1618,6 @@ function renderPredict() {
   drawZoneMap(zp);
   const inZone = zp.slice(0, 9).reduce((a, v) => a + v, 0);
   const best = zp.map((v, k) => ({ k, v })).sort((a, b) => b.v - a.v)[0];
-  const ZNAME = ["존 위·3루쪽", "존 위·가운데", "존 위·1루쪽", "존 가운데·3루쪽", "한가운데", "존 가운데·1루쪽", "존 아래·3루쪽", "존 아래·가운데", "존 아래·1루쪽", "바깥 위·3루쪽", "바깥 위·1루쪽", "바깥 아래·3루쪽", "바깥 아래·1루쪽"];
   const lowOut = zp[11] + zp[12] + zp[6] + zp[7] + zp[8];
   $("pq-znotes").innerHTML = `<div>스트라이크존 안으로 올 확률 <b>${(inZone * 100).toFixed(0)}%</b></div>
     <div>가장 많은 곳: <b>${ZNAME[best.k]}</b> (${(best.v * 100).toFixed(0)}%)</div>
@@ -1559,8 +1660,260 @@ function drawZoneMap(zp) {
   $("pq-zone-box").setAttribute("stroke", zone);
 }
 
+/* ---------- 시뮬레이션 ---------- */
+let SIM = null, simCtx, simW = 0, simH = 0, simPA = null, simStep = 0, simTimer = 0, simRaf = 0, simAnimT = null;
+const sm = { pitcher: null, batter: -1, stance: 0, first: -1, two: -1, n: 1000, auto: true };
+// 시뮬레이션 결과 -> 기대 득점표의 타석 결과 이름
+const PA_VALUE_KEY = { "직선타": "라인드라이브", "실책": "실책출루" };
+const HITS = ["1루타", "2루타", "3루타", "홈런"], TB = { "1루타": 1, "2루타": 2, "3루타": 3, "홈런": 4 };
+const SAME_PA = { "병살타": "땅볼", "희생번트": "땅볼", "번트아웃": "땅볼", "야수선택": "땅볼", "기타": "땅볼",
+  "희생플라이": "플라이", "라인드라이브": "직선타", "실책출루": "실책", "고의4구": "볼넷" };
+const OUTCOME_ORDER = ["삼진", "볼넷", "사구", "1루타", "2루타", "3루타", "홈런", "땅볼", "플라이", "직선타", "실책"];
+
+function ensureSim() {
+  if (!SIM) SIM = BallSim.create({ N, P, B, T, S, PV: D.cols.pv, ZN: D.cols.zn, RV: D.cols.rv, R, hands: D.pitchers.map((p) => p[2]),
+    nTypes: D.types.length, model: D.model, results: D.results, paResults: D.pa_results }, ensurePredictModel());
+  return SIM;
+}
+
+function setupSim() {
+  setupCanvas("simbox", "simcv", (ctx, w, h) => { simCtx = ctx; simW = w; simH = h; drawSim(simAnimT); });
+  $("sim-batter").addEventListener("change", (e) => { sm.batter = +e.target.value; if (sm.batter >= 0) sm.stance = batterStance(sm.batter, sm.pitcher); syncSim(); });
+  $("sim-stance").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { sm.stance = +b.dataset.v; syncSim(); } });
+  $("sim-n").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { sm.n = +b.dataset.v; syncSim(); } });
+  $("sim-first").addEventListener("change", (e) => { sm.first = +e.target.value; });
+  $("sim-two").addEventListener("change", (e) => { sm.two = +e.target.value; });
+  $("sim-new").addEventListener("click", newSimPA);
+  $("sim-next").addEventListener("click", () => playPitch());
+  $("sim-auto").addEventListener("click", () => {
+    sm.auto = !sm.auto; $("sim-auto").setAttribute("aria-pressed", String(sm.auto));
+    if (sm.auto && simPA && simStep < simPA.pitches.length && !simRaf) playPitch();
+  });
+  $("sim-run").addEventListener("click", runBatch);
+}
+function syncSim() {
+  for (const [id, v] of [["sim-stance", sm.stance], ["sim-n", sm.n]]) for (const b of $(id).querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.v === v));
+  const pi = D.pitchers[sm.pitcher];
+  $("sim-matchup").innerHTML = `${esc(pi[0])}<span>vs</span>${sm.batter >= 0 ? esc(D.batters[sm.batter][0]) : "리그 평균 타자"} <span style="font-size:13px">(${sm.stance ? "좌타" : "우타"})</span>`;
+}
+
+function renderSim() {
+  if (!$("sim-root") || $("sim").hidden) return;
+  if (state.pitcher === "all") {
+    $("sim-out").innerHTML = `<div class="empty-state">위 검색창에서 투수를 한 명 고르면 맞대결을 시뮬레이션합니다.</div>`;
+    $("sset-who").textContent = ""; $("sim-matchup").textContent = "";
+    return;
+  }
+  const pitcher = +state.pitcher;
+  if (sm.pitcher === pitcher) { if (!simRaf) drawSim(); return; }  // 테마가 바뀌면 다시 그린다
+  stopSimPA();
+  sm.pitcher = pitcher; sm.batter = -1; sm.stance = D.pitchers[pitcher][2] === "L" ? 0 : 1; sm.first = -1; sm.two = -1; simPA = null;
+  const pi = D.pitchers[pitcher];
+  $("sset-who").innerHTML = `투수 <b style="color:var(--ink)">${esc(pi[0])}</b> · ${esc(D.teams[pi[1]])} · ${pi[2] === "L" ? "좌투" : "우투"} <span style="color:var(--faint)">(바꾸려면 위 검색창)</span>`;
+  $("sim-batter").innerHTML = batterOptions(pitcher, "리그 평균 타자");
+  const ars = arsenalOf(pitcher);
+  const typeOpts = `<option value="-1">모델대로 (이 투수의 실제 경향)</option>` + ars.map((x) => `<option value="${x.t}">${esc(D.types[x.t])}만 던지기</option>`).join("");
+  $("sim-first").innerHTML = typeOpts; $("sim-two").innerHTML = typeOpts;
+  $("sim-log").innerHTML = `<li class="hint">‘새 타석’을 누르면 공 하나씩 진행됩니다.</li>`;
+  $("sim-out").innerHTML = `<div class="empty-state">‘시뮬레이션 실행’을 누르면 결과가 나옵니다.</div>`;
+  $("sim-banner").hidden = true; $("sim-next").disabled = true;
+  setLamps(0, 0, 0);
+  syncSim(); drawSim();
+}
+
+function setLamps(b, s, n) {
+  document.querySelectorAll(".lamps .b i").forEach((el, k) => el.classList.toggle("on", k < b));
+  document.querySelectorAll(".lamps .s i").forEach((el, k) => el.classList.toggle("on", k < s));
+  $("sim-pc").textContent = `${n}구`;
+}
+function stopSimPA() { clearTimeout(simTimer); cancelAnimationFrame(simRaf); simRaf = 0; simAnimT = null; }
+
+function newSimPA() {
+  if (state.pitcher === "all") return;
+  stopSimPA();
+  const sim = ensureSim();
+  const team = D.pitchers[sm.pitcher][1];
+  $("sim-new").disabled = true;
+  ensureTraj(team).catch(() => null).then(() => {
+    $("sim-new").disabled = false;
+    simPA = sim.simulatePA({ pitcher: sm.pitcher, batter: sm.batter, stance: sm.stance, strategy: { first: sm.first, two: sm.two } },
+      BallSim.mulberry32((Math.random() * 2 ** 32) >>> 0));
+    simPA.pitches.forEach((p) => { const prm = new Float32Array(NP); p.params = p.real >= 0 && trajParams(p.real, prm) ? prm : null; });
+    simStep = 0;
+    $("sim-log").innerHTML = ""; $("sim-banner").hidden = true;
+    setLamps(0, 0, 0); drawSim();
+    $("sim-next").disabled = false;
+    playPitch();
+  });
+}
+
+// 공 하나를 날리고, 도착하면 기록·볼카운트를 갱신한다
+function playPitch() {
+  if (!simPA || simStep >= simPA.pitches.length || simRaf) return;
+  const p = simPA.pitches[simStep];
+  $("sim-next").disabled = true;
+  const finish = () => {
+    simRaf = 0; simAnimT = null; simStep++;
+    logPitch(p, simStep);
+    drawSim();
+    const done = simStep >= simPA.pitches.length;
+    if (done) return showBanner();
+    $("sim-next").disabled = false;
+    if (sm.auto) simTimer = setTimeout(playPitch, 750);
+  };
+  if (!p.params || REDUCED) return finish();
+  const t0 = tAtY(p.params, Y_RELEASE), t1 = tAtY(p.params, Y_PLATE), flight = t1 - t0, slow = 2.2;
+  const start = performance.now();
+  const step = (now) => {
+    const t = (now - start) / 1000 / slow;
+    if (t >= flight) return finish();
+    simAnimT = t; drawSim(t);
+    simRaf = requestAnimationFrame(step);
+  };
+  simRaf = requestAnimationFrame(step);
+}
+
+function countAfter(p) {
+  let b = p.balls, s = p.strikes;
+  if (p.res === 0) b++; else if (p.res === 1 || p.res === 2) s++; else if (p.res === 3 && s < 2) s++;
+  return [b, s];
+}
+function logPitch(p, k) {
+  const [b, s] = countAfter(p);
+  setLamps(Math.min(b, 3), Math.min(s, 2), k);
+  const speed = p.real >= 0 && V[p.real] ? `${V[p.real]}km/h` : "";
+  const res = BallSim.RESULTS[p.res] + (p.bip != null ? ` · ${BallSim.BIP[p.bip]}` : "");
+  const last = k === simPA.pitches.length;
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="no" style="background:${colors[p.type]}">${k}</span>
+    <span class="what"><b>${esc(D.types[p.type])}</b> ${speed} → ${esc(res)}<small>${ZNAME[p.zone]}</small></span>
+    <span class="cnt">${last ? esc(simPA.result) : `${b}-${s}`}</span>`;
+  $("sim-log").appendChild(li);
+  li.scrollIntoView({ block: "nearest" });
+}
+function showBanner() {
+  const el = $("sim-banner"), r = simPA.result;
+  const good = ["삼진", "땅볼", "플라이", "직선타"].includes(r);
+  el.textContent = r + (good ? " 아웃" : "").replace("삼진 아웃", "삼진");
+  el.style.background = good ? "var(--navy)" : "var(--accent)";
+  el.hidden = false; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+  $("sim-next").disabled = true;
+}
+
+function drawSim(tNow) {
+  if (!simCtx || !simW || !D) return;
+  const ctx = simCtx, w = simW, h = simH, cs = getComputedStyle(document.documentElement);
+  const line = cs.getPropertyValue("--line").trim(), zone = cs.getPropertyValue("--zone").trim(), surface = cs.getPropertyValue("--surface").trim();
+  ctx.clearRect(0, 0, w, h);
+  const pr = projector("catcher", w, h);
+  const [zb, zt] = D.meta.zone, hw = 17 / 24;
+  const poly = (pts) => { ctx.beginPath(); pts.forEach((q, k) => { const [a, b] = pr(q); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); };
+  ctx.strokeStyle = zone; ctx.lineWidth = 2;
+  poly([[-hw, Y_PLATE, zb], [hw, Y_PLATE, zb], [hw, Y_PLATE, zt], [-hw, Y_PLATE, zt], [-hw, Y_PLATE, zb]]); ctx.stroke();
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  for (let k = 1; k < 3; k++) {
+    const x = -hw + 2 * hw * k / 3, z = zb + (zt - zb) * k / 3;
+    poly([[x, Y_PLATE, zb], [x, Y_PLATE, zt]]); ctx.stroke(); poly([[-hw, Y_PLATE, z], [hw, Y_PLATE, z]]); ctx.stroke();
+  }
+  if (!simPA) return;
+  const font = getComputedStyle(document.body).fontFamily;
+  // 지나간 공: 홈플레이트 통과 위치에 번호
+  simPA.pitches.slice(0, simStep).forEach((p, k) => {
+    if (!p.params) return;
+    const end = pathOf(p.params, 1); if (!end) return;
+    const [x, y] = pr(end[end.length - 1]);
+    ctx.beginPath(); ctx.arc(x, y, 11, 0, Math.PI * 2); ctx.fillStyle = colors[p.type]; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = surface; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "700 11px " + font; ctx.textAlign = "center"; ctx.fillText(String(k + 1), x, y + 4);
+  });
+  // 날아가는 공
+  if (tNow != null && simStep < simPA.pitches.length) {
+    const p = simPA.pitches[simStep];
+    if (p.params) {
+      const pts = pathOf(p.params, 30, tNow); if (!pts) return;
+      ctx.strokeStyle = colors[p.type]; ctx.lineWidth = 2; ctx.globalAlpha = 0.5; poly(pts); ctx.stroke(); ctx.globalAlpha = 1;
+      const head = pts[pts.length - 1], [x, y] = pr(head);
+      // 가까이 올수록 커 보이게
+      const r = Math.max(3, Math.min(11, 340 / (head[1] + 20)));
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = colors[p.type]; ctx.stroke();
+    }
+  }
+}
+
+// 결과 요약: 시뮬레이션 결과나 실제 결과 개수 -> 지표
+function summarize(counts, n, pitchesPerPA) {
+  const c = (k) => counts[k] || 0;
+  const h = HITS.reduce((a, k) => a + c(k), 0), bb = c("볼넷") + c("사구"), ab = n - bb;
+  const tb = HITS.reduce((a, k) => a + c(k) * TB[k], 0);
+  const value = Object.entries(counts).reduce((a, [k, v]) => a + v * (D.model.pa_value[PA_VALUE_KEY[k] || k] || 0), 0) / n;
+  return { n, k: c("삼진") / n, bb: bb / n, hr: c("홈런") / n, avg: ab ? h / ab : 0, obp: (h + bb) / n, slg: ab ? tb / ab : 0, value, ppa: pitchesPerPA, counts };
+}
+function actualVs(pitcher, batter, stance) {
+  const counts = {}; let n = 0, pitches = 0;
+  for (let i = 0; i < N; i++) {
+    if (P[i] !== pitcher || lefty(S[i]) !== stance || (batter >= 0 && B[i] !== batter)) continue;
+    pitches++;
+    if (R[i] < 0 || !(R[i] & 1)) continue;
+    const pa = D.pa_results[R[i] >> 1], k = SAME_PA[pa] || pa;
+    counts[k] = (counts[k] || 0) + 1; n++;
+  }
+  return n ? summarize(counts, n, pitches / n) : null;
+}
+
+function runBatch() {
+  if (state.pitcher === "all") return;
+  $("sim-out").innerHTML = `<div class="running">${fmt(sm.n)}타석 시뮬레이션 중…</div>`;
+  setTimeout(() => {
+    const sim = ensureSim(), seed = 20261024;
+    const m = { pitcher: sm.pitcher, batter: sm.batter, stance: sm.stance };
+    const t0 = performance.now();
+    const base = sim.batch(m, sm.n, seed);
+    const strat = sm.first >= 0 || sm.two >= 0;
+    const alt = strat ? sim.batch({ ...m, strategy: { first: sm.first, two: sm.two } }, sm.n, seed) : null;
+    const ms = performance.now() - t0;
+    const sb = summarize(base.counts, base.n, base.pitchesPerPA), sa = alt && summarize(alt.counts, alt.n, alt.pitchesPerPA);
+    const real = actualVs(sm.pitcher, -1, sm.stance), h2h = sm.batter >= 0 ? actualVs(sm.pitcher, sm.batter, sm.stance) : null;
+    renderBatch(sb, sa, real, h2h, base, ms);
+  }, 30);
+}
+function renderBatch(sb, sa, real, h2h, base, ms) {
+  const main = sa || sb;
+  const pc = (v) => (v * 100).toFixed(1) + "%", r3 = (v) => v.toFixed(3).replace(/^0/, "");
+  // 투수 기준으로 좋으면 good: 삼진은 높을수록, 나머지는 낮을수록
+  const diff = (key, fmtD, higherIsGood) => {
+    if (!sa) return "";
+    const d = sa[key] - sb[key], good = higherIsGood ? d > 0 : d < 0;
+    return `<span class="d ${Math.abs(d) < 1e-9 ? "" : good ? "good" : "bad"}">${d >= 0 ? "+" : ""}${fmtD(d)} 가정 효과</span>`;
+  };
+  const kpi = (label, val, d) => `<div class="kpi"><i>${label}</i><b>${val}</b>${d}</div>`;
+  const cols = [["시뮬레이션" + (sa ? " · 모델대로" : "") + (sm.batter >= 0 ? "" : " · 평균 타자"), sb]].concat(sa ? [["볼배합 가정", sa]] : [])
+    .concat(real ? [[`실제 시즌 · ${sm.stance ? "좌타자" : "우타자"} 전체`, real]] : []).concat(h2h ? [[`실제 맞대결`, h2h]] : []);
+  const rows = [["타석", (x) => fmt(x.n)], ["볼넷·사구 합계", (x) => pc(x.bb)],
+    ["피안타율", (x) => r3(x.avg)], ["피출루율", (x) => r3(x.obp)], ["피장타율", (x) => r3(x.slg)], ["타석당 투구 수", (x) => x.ppa.toFixed(2)],
+    ["타석당 기대 실점", (x) => (x.value >= 0 ? "+" : "") + x.value.toFixed(3)]];
+  const outRows = OUTCOME_ORDER.map((k) => [k, (x) => pc((x.counts[k] || 0) / x.n)]);
+  const ksum = base.strikeoutPitch.reduce((a, v) => a + v, 0);
+  const kp = base.strikeoutPitch.map((v, t) => ({ t, v })).filter((x) => x.v).sort((a, b) => b.v - a.v).slice(0, 3);
+  $("sim-out").innerHTML = `
+    <div class="kpis">
+      ${kpi("삼진", pc(main.k), diff("k", (d) => (d * 100).toFixed(1) + "%p", true))}
+      ${kpi("볼넷·사구", pc(main.bb), diff("bb", (d) => (d * 100).toFixed(1) + "%p", false))}
+      ${kpi("피안타율 / 피장타율", `${r3(main.avg)} / ${r3(main.slg)}`, diff("slg", (d) => d.toFixed(3), false))}
+      ${kpi("타석당 기대 실점", (main.value >= 0 ? "+" : "") + main.value.toFixed(3), diff("value", (d) => (d >= 0 ? "+" : "") + d.toFixed(3), false))}
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th></th>${cols.map(([l]) => `<th>${esc(l)}</th>`).join("")}</tr></thead>
+      <tbody>${rows.map(([l, f]) => `<tr><td>${l}</td>${cols.map(([, x]) => `<td>${f(x)}</td>`).join("")}</tr>`).join("")}
+        <tr class="total"><td>타석 결과 분포</td>${cols.map(() => "<td></td>").join("")}</tr>
+        ${outRows.map(([l, f]) => `<tr><td>${l}</td>${cols.map(([, x]) => `<td>${f(x)}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>
+    <p class="caveat" style="margin:0">삼진을 잡은 공 (모델대로): ${kp.map((x) => `${esc(D.types[x.t])} ${(x.v / ksum * 100).toFixed(0)}%`).join(" · ") || "–"}
+      · ${fmt(sb.n)}타석 ${sa ? "× 2 " : ""}계산 ${ms.toFixed(0)}ms. 기대 실점은 2026 기대 득점표로 매긴 타석 결과 가치의 평균이고, 음수일수록 투수에게 좋습니다.
+      ${h2h && h2h.n < 30 ? `실제 맞대결은 ${h2h.n}타석뿐이라 우연의 영향이 큽니다.` : ""}</p>`;
+}
+
 /* ---------- 탭 ---------- */
-const TABS = ["overview", "predict", "trajectory", "tunnel", "counts"];
+const TABS = ["overview", "predict", "sim", "trajectory", "tunnel", "counts"];
 let currentTab = "overview", trajAutoPlayed = false;
 function panelOf(tab) { return $(tab === "counts" ? "counts-tab" : tab); }
 function moveInk() {
@@ -1581,6 +1934,7 @@ function showTab(tab, focus) {
   if (focus) $("tab-" + tab).focus();
   moveInk();
   if (tab === "predict") renderPredict();
+  if (tab === "sim") renderSim();
   try { history.replaceState(null, "", "#" + tab); } catch (_) { /* 미리보기 등에서는 무시 */ }
   // 궤적 탭에 처음 들어오면 한 번 재생해서 무엇을 하는 화면인지 보여준다.
   if (tab === "trajectory" && !trajAutoPlayed && !REDUCED) {
@@ -1608,7 +1962,7 @@ function update(pitcherChanged) {
   renderHero(agg); renderInsights(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg);
   animateZone();
   drawMove(); refreshTraj();
-  renderPredict();
+  renderPredict(); renderSim();
 }
 
 function onTheme() { if (!D) return; readColors(); update(); }
@@ -1624,7 +1978,7 @@ fetch("pitches.json").then((r) => { if (!r.ok) throw new Error(r.status); return
   // 첫 화면: 가장 많이 던진 투수
   let top = 0; for (let i = 1; i < pitchCount.length; i++) if (pitchCount[i] > pitchCount[top]) top = i;
   state.pitcher = String(top);
-  setupZone(); setupTrajMove(); setupPredict();
+  setupZone(); setupTrajMove(); setupPredict(); setupSim();
   bindCombo(); bindFilters(); bindTabs();
   update(true);
   showTab(location.hash.slice(1) || "overview");
