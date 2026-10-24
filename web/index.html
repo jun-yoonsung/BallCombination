@@ -233,6 +233,48 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 .cgroup { font-size: 12px; color: var(--faint); font-weight: 600; letter-spacing: 0.06em; margin-top: 10px; }
 .cgroup:first-child { margin-top: 0; }
 
+/* 다음 공 예측 */
+.pred { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 1040px) { .pred { grid-template-columns: minmax(0, 1fr); } }
+.pred-set { display: grid; gap: 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 120px); }
+@media (max-width: 1040px) { .pred-set { position: static; } }
+.pred-set .field select { background: var(--surface-2); }
+.countgrid { display: grid; grid-template-columns: 34px repeat(3, minmax(0, 1fr)); gap: 4px; align-items: center; }
+.countgrid .hd { font-size: 11px; color: var(--faint); text-align: center; font-weight: 600; }
+.countgrid button { font-family: var(--font-data); font-weight: 600; font-size: 13px; padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.1s; }
+.countgrid button:active { transform: scale(0.95); }
+.countgrid button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.chips .chip:disabled { opacity: 0.45; cursor: not-allowed; }
+.pred-out { display: grid; gap: 18px; min-width: 0; }
+.pred-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 12px; }
+.pred-top .big { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1; display: inline-flex; align-items: center; gap: 10px; }
+.pred-top .big i { width: 14px; height: 14px; border-radius: 50%; }
+.pred-top .pv { font-family: var(--font-data); font-size: 28px; font-weight: 600; }
+.pbars { display: grid; gap: 8px; }
+.pbar { display: grid; grid-template-columns: 76px minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 13px; }
+.pbar .nm { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pbar .nm i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.pbar .track { height: 12px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.pbar .fill { height: 100%; border-radius: 6px; width: 0; transition: width 0.55s var(--ease); }
+.pbar .v { font-family: var(--font-data); text-align: right; font-weight: 600; }
+.evidence { margin-top: 14px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.evidence b { color: var(--ink); font-family: var(--font-data); font-weight: 600; }
+.evidence .arr { color: var(--faint); }
+.zonewrap { display: grid; grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); gap: 18px; align-items: center; }
+@media (max-width: 640px) { .zonewrap { grid-template-columns: minmax(0, 1fr); } }
+.zonemap { width: 100%; max-width: 300px; margin: 0 auto; display: block; }
+.zonemap .cell { transition: fill-opacity 0.45s var(--ease); }
+.zonemap text { font-family: var(--font-data); font-size: 11px; font-weight: 600; pointer-events: none; }
+.zone-notes { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.zone-notes b { color: var(--ink); }
+.vtable td.best { position: relative; }
+.vbar { display: inline-block; height: 8px; border-radius: 4px; vertical-align: middle; margin-left: 8px; transition: width 0.5s var(--ease); }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; font-family: var(--font-body); color: #fff; background: var(--accent); border-radius: 6px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
+.caveat { font-size: 12px; color: var(--muted); margin: 12px 0 0; max-width: 80ch; }
+.empty-state { padding: 36px 16px; text-align: center; color: var(--muted); }
+
 .tip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; font-size: 12px; box-shadow: var(--shadow); max-width: 260px; }
 .tip b { font-weight: 700; }
 .tip .m { font-family: var(--font-data); color: var(--muted); }
@@ -256,6 +298,7 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 </div>
 <div class="tip" id="tip" hidden></div>
 
+<script src="predict.js"></script>
 <script>
 (() => {
 "use strict";
@@ -450,6 +493,7 @@ function shell() {
   <nav class="tabs" aria-label="분석 화면">
     <div class="tablist" role="tablist" id="tablist">
       <button type="button" class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">개요</button>
+      <button type="button" class="tab" role="tab" id="tab-predict" aria-controls="predict" aria-selected="false" data-tab="predict">다음 공 예측</button>
       <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">궤적 · 무브먼트</button>
       <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">터널링</button>
       <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">카운트별 볼배합</button>
@@ -525,6 +569,44 @@ function shell() {
       </div>
       <div class="tablewrap mini"><table id="tuntable"></table></div>
     </section>
+  </section>
+
+  <section class="tabpanel" role="tabpanel" id="predict" aria-labelledby="tab-predict" hidden>
+    <div class="pred" id="pred-root">
+      <aside class="panel pred-set" aria-labelledby="h-pset">
+        <h2 id="h-pset">상황 설정</h2>
+        <p class="sub" id="pset-who" style="margin:0"></p>
+        <div class="field"><label for="pq-batter">타자</label><select id="pq-batter"></select></div>
+        <div class="field"><span class="flabel" id="l-pq-stance">타자 타석</span>
+          <div class="seg" id="pq-stance" role="group" aria-labelledby="l-pq-stance">
+            <button type="button" data-v="0" aria-pressed="true">우타</button><button type="button" data-v="1" aria-pressed="false">좌타</button>
+          </div></div>
+        <div class="field"><span class="flabel">카운트 (볼-스트라이크)</span>
+          <div class="countgrid" id="pq-count" role="group" aria-label="카운트"></div></div>
+        <div class="field"><span class="flabel">직전 공</span><div class="chips" id="pq-prev" role="group" aria-label="직전 공 구종"></div></div>
+      </aside>
+      <div class="pred-out">
+        <section class="panel" aria-labelledby="h-pnext">
+          <h2 id="h-pnext">타자 입장 · 다음 공은?</h2>
+          <p class="sub">이 투수가 비슷한 상황에서 던진 공의 비율로 다음 공의 구종 확률을 계산합니다. 하나를 단정하기보다 상위 2개를 함께 대비하는 용도로 쓰세요.</p>
+          <div id="pq-result"></div>
+        </section>
+        <section class="panel" aria-labelledby="h-pzone">
+          <div class="phead">
+            <div><h2 id="h-pzone">예상 코스</h2>
+            <p class="sub">포수 시점 존 9칸과 바깥 4칸. 구종을 고르면 그 구종이 올 때의 코스, 전체는 구종 확률로 합친 코스입니다.</p></div>
+          </div>
+          <div class="chips" id="pq-ztype" role="group" aria-label="코스를 볼 구종" style="margin-bottom:12px"></div>
+          <div class="zonewrap"><svg class="zonemap" id="pq-zone" viewBox="0 0 200 200" role="img" aria-label="예상 코스 확률"></svg><div class="zone-notes" id="pq-znotes"></div></div>
+        </section>
+        <section class="panel" aria-labelledby="h-pval">
+          <h2 id="h-pval">투수 입장 · 이 상황에서 통한 공</h2>
+          <p class="sub">이 투수가 같은 카운트(와 타석)에서 던진 공들이 실점을 얼마나 막았는지 구종별로 봅니다. 100구당 막은 실점이 클수록 투수에게 좋았던 공입니다.</p>
+          <div class="tablewrap"><table class="vtable" id="pq-value"></table></div>
+          <p class="caveat">과거에 결과가 좋았던 공이라는 뜻이지 정답은 아닙니다. 그 공만 고집하면 타자가 노리게 되므로, 사용률과 함께 보고 섞는 비율을 정하는 참고로 쓰세요. 표본이 적은 칸은 그 투수 전체·리그 평균 쪽으로 당겨서 계산했습니다.</p>
+        </section>
+      </div>
+    </div>
   </section>
 
   <section class="tabpanel" role="tabpanel" id="counts-tab" aria-labelledby="tab-counts" hidden>
@@ -1311,8 +1393,174 @@ function moveHover(e) {
   showTip(e.clientX, e.clientY, `<b>${esc(D.types[best.t])}</b> 평균 · ${fmt(best.n)}구<br><span class="m">수평 ${best.h.toFixed(1)}cm · 수직 ${best.v.toFixed(1)}cm<br>${best.kmh.toFixed(1)}km/h</span>`);
 }
 
+/* ---------- 다음 공 예측 ---------- */
+let PM = null;  // web/predict.js 모델 (탭을 처음 열 때 만든다)
+const pq = { pitcher: null, batter: -1, stance: 0, balls: 0, strikes: 0, prev: -1, ztype: "all" };
+const ZONE_CELLS = (() => {
+  // 0~8: 존 안 3x3 (위 왼쪽부터), 9~12: 바깥 위왼·위오·아래왼·아래오. 포수 시점, 왼쪽이 3루 쪽.
+  const cells = [];
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    const x = 50 + c * 100 / 3, y = 50 + r * 100 / 3;
+    cells.push({ pts: `${x},${y} ${x + 100 / 3},${y} ${x + 100 / 3},${y + 100 / 3} ${x},${y + 100 / 3}`, cx: x + 50 / 3, cy: y + 50 / 3 + 4 });
+  }
+  cells.push({ pts: "10,10 100,10 100,50 50,50 50,100 10,100", cx: 30, cy: 34 });
+  cells.push({ pts: "100,10 190,10 190,100 150,100 150,50 100,50", cx: 170, cy: 34 });
+  cells.push({ pts: "10,100 50,100 50,150 100,150 100,190 10,190", cx: 30, cy: 174 });
+  cells.push({ pts: "150,100 190,100 190,190 100,190 100,150 150,150", cx: 170, cy: 174 });
+  return cells;
+})();
+
+function ensurePredictModel() {
+  if (PM) return PM;
+  const c = D.cols;
+  PM = BallPredict.create({ N, P, B, T, S, PV: c.pv, ZN: c.zn, RV: c.rv, hands: D.pitchers.map((p) => p[2]), nTypes: D.types.length, model: D.model });
+  return PM;
+}
+
+function setupPredict() {
+  $("pq-count").innerHTML = `<span></span>${[0, 1, 2].map((s) => `<span class="hd">${s}S</span>`).join("")}` +
+    [0, 1, 2, 3].map((b) => `<span class="hd">${b}B</span>` + [0, 1, 2].map((s) => `<button type="button" data-b="${b}" data-s="${s}" aria-pressed="false">${b}-${s}</button>`).join("")).join("");
+  $("pq-count").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    pq.balls = +b.dataset.b; pq.strikes = +b.dataset.s;
+    if (pq.balls === 0 && pq.strikes === 0) pq.prev = -1;
+    renderPredict();
+  });
+  $("pq-stance").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pq.stance = +b.dataset.v; renderPredict(); } });
+  $("pq-prev").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && !b.disabled) { pq.prev = +b.dataset.t; renderPredict(); } });
+  $("pq-ztype").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { pq.ztype = b.dataset.t; renderPredict(); } });
+  $("pq-batter").addEventListener("change", (e) => {
+    pq.batter = +e.target.value;
+    if (pq.batter >= 0) pq.stance = batterStance(pq.batter);
+    renderPredict();
+  });
+}
+
+// 그 타자가 가장 많이 선 타석 (스위치 타자는 투수 손 반대쪽)
+function batterStance(b) {
+  let l = 0, r = 0;
+  const hand = pq.pitcher != null && D.pitchers[pq.pitcher][2] === "L" ? 1 : 0;
+  for (let i = 0; i < N; i++) if (B[i] === b) { lefty(S[i]) ? l++ : r++; }
+  if (l && r && Math.min(l, r) / (l + r) > 0.2) return hand ? 0 : 1;
+  return l > r ? 1 : 0;
+}
+
+function fillBatters() {
+  const faced = new Map();
+  for (let i = 0; i < N; i++) if (P[i] === pq.pitcher && R[i] >= 0 && (R[i] & 1)) faced.set(B[i], (faced.get(B[i]) || 0) + 1);
+  const mine = [...faced].sort((a, b) => b[1] - a[1]);
+  const others = D.batters.map((b, i) => [i, b]).filter(([i]) => !faced.has(i)).sort((a, b) => a[1][0].localeCompare(b[1][0], "ko"));
+  $("pq-batter").innerHTML = `<option value="-1">지정 안 함 (타자 보정 없이)</option>` +
+    (mine.length ? `<optgroup label="이 투수와 상대한 타자">${mine.map(([i, n]) => `<option value="${i}">${esc(D.batters[i][0])} · ${esc(D.teams[D.batters[i][1]])} (${n}타석)</option>`).join("")}</optgroup>` : "") +
+    `<optgroup label="그 밖의 타자">${others.map(([i, b]) => `<option value="${i}">${esc(b[0])} · ${esc(D.teams[b[1]])}</option>`).join("")}</optgroup>`;
+  $("pq-batter").value = String(pq.batter);
+}
+
+function renderPredict() {
+  if (!$("pred-root") || $("predict").hidden) return;
+  const root = $("pq-result");
+  if (state.pitcher === "all") {
+    for (const id of ["pq-result", "pq-value", "pq-znotes"]) $(id).innerHTML = "";
+    $("pq-zone").innerHTML = ""; $("pq-ztype").innerHTML = ""; $("pq-prev").innerHTML = "";
+    $("pset-who").textContent = "";
+    root.innerHTML = `<div class="empty-state">위 검색창에서 투수를 한 명 고르면 다음 공을 예측합니다.</div>`;
+    return;
+  }
+  const m = ensurePredictModel();
+  const pitcher = +state.pitcher;
+  if (pq.pitcher !== pitcher) { pq.pitcher = pitcher; pq.batter = -1; pq.prev = -1; pq.ztype = "all"; fillBatters(); }
+  const pinfo = D.pitchers[pitcher];
+  $("pset-who").innerHTML = `투수 <b style="color:var(--ink)">${esc(pinfo[0])}</b> · ${esc(D.teams[pinfo[1]])} · ${pinfo[2] === "L" ? "좌투" : "우투"} <span style="color:var(--faint)">(바꾸려면 위 검색창)</span>`;
+  for (const b of $("pq-count").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.b === pq.balls && +b.dataset.s === pq.strikes));
+  for (const b of $("pq-stance").querySelectorAll("button")) b.setAttribute("aria-pressed", String(+b.dataset.v === pq.stance));
+
+  // 이 투수가 던진 구종 (직전 공 칩, 결과 정렬에 씀)
+  const used = new Float64Array(D.types.length);
+  for (let i = 0; i < N; i++) if (P[i] === pitcher) used[T[i]]++;
+  const total = used.reduce((a, v) => a + v, 0);
+  const arsenal = [...used].map((n, t) => ({ t, n })).filter((x) => x.n / total >= 0.01).sort((a, b) => b.n - a.n);
+  const first = pq.balls === 0 && pq.strikes === 0;
+  $("pq-prev").innerHTML = `<button type="button" class="chip" data-t="-1" aria-pressed="${pq.prev === -1}">${first ? "초구 (직전 공 없음)" : "모름 / 상관없음"}</button>` +
+    arsenal.map((x) => `<button type="button" class="chip" data-t="${x.t}" aria-pressed="${pq.prev === x.t}" ${first ? "disabled" : ""}><span class="dot" style="background:${colors[x.t]}"></span>${esc(D.types[x.t])}</button>`).join("");
+
+  const q = { pitcher, batter: pq.batter, stance: pq.stance, balls: pq.balls, strikes: pq.strikes, prev: pq.prev };
+  const res = m.typeProbs(q);
+  const order = res.probs.map((p, t) => ({ t, p })).filter((x) => x.p >= 0.005 || used[x.t] > 0).sort((a, b) => b.p - a.p);
+  const top = order[0];
+  const ev = res.evidence, cnt = `${pq.balls}-${pq.strikes}`;
+  const ev_steps = [`이 투수 <b>${fmt(ev[0])}</b>구`, `${cnt} 카운트 <b>${fmt(ev[1])}</b>구`, `${pq.stance ? "좌타" : "우타"} 상대 <b>${fmt(ev[2])}</b>구`];
+  if (pq.prev >= 0) ev_steps.push(`직전 ${esc(D.types[pq.prev])} <b>${fmt(ev[3])}</b>구`);
+  else if (!first) ev_steps.push(`직전 공 무관`);
+  const evalT = D.model.eval.type;
+  const prevBars = new Map([...root.querySelectorAll(".pbar")].map((el) => [el.dataset.t, el.querySelector(".fill").style.width]));
+  root.innerHTML = `<div class="pred-top"><span class="big"><i style="background:${colors[top.t]}"></i>${esc(D.types[top.t])}</span><span class="pv">${(top.p * 100).toFixed(0)}%</span>
+      <span style="color:var(--muted);font-size:13px">2순위 ${esc(D.types[order[1].t])} ${(order[1].p * 100).toFixed(0)}% · 둘 중 하나일 확률 ${((top.p + order[1].p) * 100).toFixed(0)}%</span></div>
+    <div class="pbars">${order.map((x) => `<div class="pbar" data-t="${x.t}"><span class="nm"><i style="background:${colors[x.t]}"></i>${esc(D.types[x.t])}</span>
+      <div class="track"><div class="fill" style="background:${colors[x.t]};width:${prevBars.get(String(x.t)) || "0%"}"></div></div><span class="v">${(x.p * 100).toFixed(1)}%</span></div>`).join("")}</div>
+    <div class="evidence">근거: ${ev_steps.join(' <span class="arr">→</span> ')}${res.batterAdjusted ? ` · <b>${esc(D.batters[pq.batter][0])}</b> 상대 보정` : ""}
+      <span style="margin-left:auto">검증 정답률 ${(evalT.acc * 100).toFixed(1)}% · 상위 2개 ${(evalT.top2 * 100).toFixed(1)}%</span></div>`;
+  requestAnimationFrame(() => root.querySelectorAll(".pbar").forEach((el) => {
+    const x = order.find((o) => String(o.t) === el.dataset.t);
+    el.querySelector(".fill").style.width = (x.p / top.p * 100).toFixed(1) + "%";
+  }));
+
+  // 코스
+  const zTypes = order.slice(0, 5);
+  if (pq.ztype !== "all" && !zTypes.some((x) => String(x.t) === pq.ztype)) pq.ztype = "all";
+  $("pq-ztype").innerHTML = `<button type="button" class="chip" data-t="all" aria-pressed="${pq.ztype === "all"}">전체 (구종 확률로 합산)</button>` +
+    zTypes.map((x) => `<button type="button" class="chip" data-t="${x.t}" aria-pressed="${pq.ztype === String(x.t)}"><span class="dot" style="background:${colors[x.t]}"></span>${esc(D.types[x.t])}</button>`).join("");
+  let zp = new Array(BallPredict.N_ZONES).fill(0), zN = 0;
+  if (pq.ztype === "all") {
+    for (const x of order) { const z = m.zoneProbs(q, x.t); z.probs.forEach((v, k) => { zp[k] += v * x.p; }); zN += z.n; }
+  } else { const z = m.zoneProbs(q, +pq.ztype); zp = z.probs; zN = z.n; }
+  drawZoneMap(zp);
+  const inZone = zp.slice(0, 9).reduce((a, v) => a + v, 0);
+  const best = zp.map((v, k) => ({ k, v })).sort((a, b) => b.v - a.v)[0];
+  const ZNAME = ["존 위·3루쪽", "존 위·가운데", "존 위·1루쪽", "존 가운데·3루쪽", "한가운데", "존 가운데·1루쪽", "존 아래·3루쪽", "존 아래·가운데", "존 아래·1루쪽", "바깥 위·3루쪽", "바깥 위·1루쪽", "바깥 아래·3루쪽", "바깥 아래·1루쪽"];
+  const lowOut = zp[11] + zp[12] + zp[6] + zp[7] + zp[8];
+  $("pq-znotes").innerHTML = `<div>스트라이크존 안으로 올 확률 <b>${(inZone * 100).toFixed(0)}%</b></div>
+    <div>가장 많은 곳: <b>${ZNAME[best.k]}</b> (${(best.v * 100).toFixed(0)}%)</div>
+    <div>낮은 쪽(존 아래 칸 + 바깥 아래) <b>${(lowOut * 100).toFixed(0)}%</b></div>
+    <div style="color:var(--faint);font-size:12px">이 투수의 해당 구종·타석 기록 ${fmt(zN)}구에 리그의 카운트별 경향을 더했습니다. 코스는 공마다 많이 흩어져서 대략적인 방향으로 보세요.</div>`;
+
+  // 투수 입장: 구종별 가치
+  const vals = m.typeValues(q).filter((v) => used[v.type] > 0);
+  const prob = new Map(order.map((x) => [x.t, x.p]));
+  const rows = vals.map((v) => ({ ...v, save: -v.value * 100, use: prob.get(v.type) || 0 })).sort((a, b) => b.use - a.use);
+  const cand = rows.filter((r) => r.use >= 0.05 && r.nTotal >= 30);
+  const bestV = cand.length ? cand.reduce((a, b) => (b.save > a.save ? b : a)) : null;
+  const maxAbs = Math.max(0.5, ...rows.map((r) => Math.abs(r.save)));
+  $("pq-value").innerHTML = `<thead><tr><th>구종</th><th>예상 사용률</th><th>100구당 막은 실점</th><th>${cnt} 기록</th><th>${pq.stance ? "좌타" : "우타"} 상대</th></tr></thead><tbody>` +
+    rows.map((r) => `<tr><td><span class="tname"><i style="background:${colors[r.type]}"></i>${esc(D.types[r.type])}</span>${bestV && r.type === bestV.type ? '<span class="tag">가장 잘 통함</span>' : ""}</td>
+      <td>${(r.use * 100).toFixed(1)}%</td>
+      <td>${r.save >= 0 ? "+" : ""}${r.save.toFixed(2)}<span class="vbar" style="width:${Math.abs(r.save) / maxAbs * 60}px;background:${r.save >= 0 ? "var(--pt-ch)" : "var(--accent)"}"></span></td>
+      <td>${fmt(r.n)}구</td><td>${fmt(r.nStance)}구</td></tr>`).join("") + "</tbody>";
+}
+
+function drawZoneMap(zp) {
+  const cs = getComputedStyle(document.documentElement);
+  const accent = cs.getPropertyValue("--accent").trim(), line = cs.getPropertyValue("--line").trim(), ink = cs.getPropertyValue("--ink").trim(), zone = cs.getPropertyValue("--zone").trim();
+  const max = Math.max(...zp);
+  const svg = $("pq-zone");
+  if (!svg.children.length) {
+    svg.innerHTML = ZONE_CELLS.map((c, k) => `<polygon class="cell" data-k="${k}" points="${c.pts}" fill-opacity="0"/><text data-k="${k}" x="${c.cx}" y="${c.cy}" text-anchor="middle"></text>`).join("") +
+      `<rect x="50" y="50" width="100" height="100" fill="none" stroke-width="2" id="pq-zone-box"/>`;
+  }
+  svg.querySelectorAll("polygon").forEach((el) => {
+    const v = zp[+el.dataset.k], a = max ? v / max : 0;
+    el.setAttribute("fill", accent); el.setAttribute("stroke", line); el.setAttribute("stroke-width", "1");
+    el.setAttribute("fill-opacity", (0.06 + 0.86 * a).toFixed(3));
+  });
+  svg.querySelectorAll("text").forEach((el) => {
+    const v = zp[+el.dataset.k];
+    el.textContent = (v * 100).toFixed(0) + "%";
+    el.setAttribute("fill", v / max > 0.55 ? "#fff" : ink);
+  });
+  $("pq-zone-box").setAttribute("stroke", zone);
+}
+
 /* ---------- 탭 ---------- */
-const TABS = ["overview", "trajectory", "tunnel", "counts"];
+const TABS = ["overview", "predict", "trajectory", "tunnel", "counts"];
 let currentTab = "overview", trajAutoPlayed = false;
 function panelOf(tab) { return $(tab === "counts" ? "counts-tab" : tab); }
 function moveInk() {
@@ -1332,6 +1580,7 @@ function showTab(tab, focus) {
   }
   if (focus) $("tab-" + tab).focus();
   moveInk();
+  if (tab === "predict") renderPredict();
   try { history.replaceState(null, "", "#" + tab); } catch (_) { /* 미리보기 등에서는 무시 */ }
   // 궤적 탭에 처음 들어오면 한 번 재생해서 무엇을 하는 화면인지 보여준다.
   if (tab === "trajectory" && !trajAutoPlayed && !REDUCED) {
@@ -1359,6 +1608,7 @@ function update(pitcherChanged) {
   renderHero(agg); renderInsights(agg); renderMix(agg); renderFinish(agg); renderCounts(agg); renderLegend(agg);
   animateZone();
   drawMove(); refreshTraj();
+  renderPredict();
 }
 
 function onTheme() { if (!D) return; readColors(); update(); }
@@ -1374,7 +1624,7 @@ fetch("pitches.json").then((r) => { if (!r.ok) throw new Error(r.status); return
   // 첫 화면: 가장 많이 던진 투수
   let top = 0; for (let i = 1; i < pitchCount.length; i++) if (pitchCount[i] > pitchCount[top]) top = i;
   state.pitcher = String(top);
-  setupZone(); setupTrajMove();
+  setupZone(); setupTrajMove(); setupPredict();
   bindCombo(); bindFilters(); bindTabs();
   update(true);
   showTab(location.hash.slice(1) || "overview");

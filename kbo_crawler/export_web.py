@@ -12,20 +12,21 @@
 - 카운트, 아웃, 주자, 타석, 결과, 포스트시즌 여부는 비트로 묶어 한 정수(s)에 담는다.
 - mx, mz는 무브먼트(cm, 포수 시점 수평 +가 1루 쪽 / 중력 제외 수직).
 - 투수의 투구 손(R/L)은 측정 시작 지점의 좌우 위치(x0) 중앙값 부호로 판단한다.
+- pv는 같은 타석의 직전 구종(첫 공이면 null), zn은 코스(predict.zone_of, 0~12),
+  rv는 투구 가치(타자 기준 득점 x1000). model에는 예측 상수, 타자별 구종 보정, 검증 성능이 들어간다.
 
 궤적 파라미터는 용량이 커서 투수의 마지막 소속팀별로 traj/{팀 인덱스}.json에 따로 저장하고,
 웹에서는 그 팀 투수를 볼 때만 불러온다. y0는 항상 50ft라서 저장하지 않는다.
 """
 
 import argparse
-import csv
 import glob
 import json
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from statistics import median
 
+from . import predict
 from .physics import from_row, movement
 
 ZONE_TOP, ZONE_BOT = 3.33, 1.61
@@ -64,19 +65,13 @@ def build(paths):
     teams, types, dates = Index(), Index(), Index()
     pitchers, batters = Index(), Index()
     pitcher_info, batter_info = {}, {}
-    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd", "r", "mx", "mz")}
-    release_x = {}  # 투수별 x0 목록 (투구 손 판단용)
+    cols = {k: [] for k in ("p", "b", "t", "v", "x", "z", "s", "d", "sd", "r", "mx", "mz", "pv", "zn", "rv")}
     traj = []  # (투구 인덱스, 투수 인덱스, 파라미터)
 
-    rows = []
-    for path in paths:
-        with open(path, encoding="utf-8-sig") as f:
-            rows.extend(csv.DictReader(f))
-    rows.sort(key=lambda r: (r["game_date"], r["game_id"], _int(r["seqno"])))
+    rows = predict.annotate(predict.load_rows(paths))  # 구종 없는 공은 빠지고 경기·seqno 순으로 정렬됨
+    run_value = predict.run_values(rows)
 
     for r in rows:
-        if not r["pitch_type"]:
-            continue
         top = r["half"] == "top"
         p_team = r["home_team"] if top else r["away_team"]
         b_team = r["away_team"] if top else r["home_team"]
@@ -119,8 +114,10 @@ def build(paths):
         mv = movement(params) if params else None
         cols["mx"].append(None if mv is None else round(mv[0]))
         cols["mz"].append(None if mv is None else round(mv[1]))
+        cols["pv"].append(None if r["_prev"] == "-" else types(r["_prev"]))
+        cols["zn"].append(r["_zone"])
+        cols["rv"].append(None if r["_rv"] is None else round(r["_rv"] * 1000))
         if params:
-            release_x.setdefault(p, []).append(params["x0"])
             traj.append((len(cols["p"]) - 1, p, params))
 
     # 구종은 많이 던진 순서로 정렬해서 인덱스를 다시 매긴다.
@@ -128,8 +125,18 @@ def build(paths):
     order = sorted(range(len(types.items)), key=lambda i: -freq[i])
     remap = {old: new for new, old in enumerate(order)}
     cols["t"] = [remap[t] for t in cols["t"]]
+    cols["pv"] = [None if t is None else remap[t] for t in cols["pv"]]
+    type_names = [types.items[i] for i in order]
 
-    hands = {p: ("L" if median(xs) > 0 else "R") for p, xs in release_x.items()}
+    type_model = predict.TypeModel().fit(rows)
+    ev = predict.evaluate(rows)
+    batter_ratio = [None] * len(batters.items)
+    for bid, ratio in type_model.batter_ratio.items():
+        if bid in batters.pos:
+            batter_ratio[batters.pos[bid]] = [round(ratio.get(t, 1.0), 5) for t in type_names]
+
+    # 투구 손은 예측 모델과 같은 값을 쓴다 (predict.annotate)
+    hands = {pitchers.pos[r["pitcher_id"]]: r["_hand"] for r in rows}
     traj_by_team = {}
     for i, p, params in traj:
         t = traj_by_team.setdefault(pitcher_info[p][1], {"i": [], **{k: [] for k in TRAJ_KEYS}})
@@ -147,13 +154,23 @@ def build(paths):
             "traj_y0": 50.0,
         },
         "teams": teams.items,
-        "types": [types.items[i] for i in order],
+        "types": type_names,
         "results": RESULTS,
         "pa_results": PA_RESULTS,
         "dates": dates.items,
         "pitchers": [[*pitcher_info[i], hands.get(i)] for i in range(len(pitchers.items))],
         "batters": [list(batter_info[i]) for i in range(len(batters.items))],
         "cols": cols,
+        "model": {
+            "type_alphas": predict.TYPE_ALPHAS,
+            "zone_alpha_league": predict.ZONE_ALPHA_LEAGUE,
+            "zone_alpha_pitcher": predict.ZONE_ALPHA_PITCHER,
+            "value_alpha": predict.VALUE_ALPHA,
+            "zone_box": [predict.ZONE_BOT, predict.ZONE_TOP, predict.ZONE_HALF_W],
+            "batter_ratio": batter_ratio,
+            "count_value": {k: round(v, 4) for k, v in run_value["count_value"].items()},
+            "eval": {k: ev[k] for k in ("split", "n_train", "n_test", "type", "zone")},
+        },
     }
     return data, traj_by_team
 
