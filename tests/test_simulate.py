@@ -39,5 +39,26 @@ class SimulationCalibrationTest(unittest.TestCase):
         self.assertAlmostEqual(p["simulated"], p["actual"], delta=0.15)
 
 
+@unittest.skipUnless((ROOT / "web" / "pitches.json").exists() and shutil.which("node"), "데이터와 node가 있어야 함")
+class GameRulesTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        out = subprocess.run(["node", str(ROOT / "tests" / "game_check.js")], capture_output=True, text=True, check=True)
+        cls.r = json.loads(out.stdout)
+
+    def test_called_pitches_follow_2026_calls(self):
+        self.assertGreater(self.r["called"]["middle"], 0.95)  # ABS: 존 한가운데를 안 치면 스트라이크
+        self.assertLess(self.r["called"]["outsideLow"], 0.3)
+
+    def test_aiming_lands_closer_than_random(self):
+        self.assertLess(self.r["aim"]["aimed"], self.r["aim"]["random"] * 0.7)
+
+    def test_swing_rules(self):
+        whiff, ball, called = "2", "0", "1"
+        self.assertNotIn(whiff, self.r["perfect"])  # 완벽한 스윙은 헛스윙이 없다
+        self.assertEqual(self.r["late"], {whiff: 500})  # 0.2초 늦으면 늘 헛스윙
+        self.assertEqual(set(self.r["take"]) - {ball, called}, set())  # 안 치면 볼 또는 루킹 스트라이크뿐
+
+
 if __name__ == "__main__":
     unittest.main()

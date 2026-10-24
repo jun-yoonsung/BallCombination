@@ -187,28 +187,33 @@
       return m;
     }
 
-    /* m: { pitcher, batter(-1 = 리그 평균 타자), stance, strategy: { first: 구종|-1, two: 구종|-1 } } */
-    function simulatePA(m, rng) {
+    /* 투수가 다음에 던질 공: 구종 -> 코스 -> 같은 구종·코스의 실제 공 하나 */
+    function nextPitch(m, b, s, prev, rng) {
       const real = realPitches(m.pitcher);
       const typeMemo = m._typeMemo || (m._typeMemo = new Map());
+      const q = { pitcher: m.pitcher, batter: m.batter, stance: m.stance, balls: b, strikes: s, prev };
+      const key = `${b}${s}|${prev}`;
+      let tp = typeMemo.get(key);
+      if (!tp) typeMemo.set(key, (tp = PM.typeProbs(q).probs));
+      const st = m.strategy || {};
+      const type = b === 0 && s === 0 && st.first >= 0 ? st.first : s === 2 && st.two >= 0 ? st.two : pick(tp, rng());
+      const zkey = `z${type}|${b}${s}`;
+      let zp = typeMemo.get(zkey);
+      if (!zp) {
+        const zr = zoneRatio(m.pitcher);
+        typeMemo.set(zkey, (zp = norm(PM.zoneProbs(q, type).probs.map((v, z) => v * zoneAdj[b * 3 + s][z] * zr[z < 9 ? 1 : 0]))));
+      }
+      const zone = pick(zp, rng());
+      const pool = real.get(`${type}|${zone}|${m.stance}`) || real.get(`${type}|${zone}`) || real.get(`${type}`);
+      return { type, zone, real: pool ? pool[Math.floor(rng() * pool.length)] : -1, q };
+    }
+
+    /* m: { pitcher, batter(-1 = 리그 평균 타자), stance, strategy: { first: 구종|-1, two: 구종|-1 } } */
+    function simulatePA(m, rng) {
       let b = 0, s = 0, prev = -1;
       const pitches = [];
       for (let k = 0; k < 25; k++) {
-        const q = { pitcher: m.pitcher, batter: m.batter, stance: m.stance, balls: b, strikes: s, prev };
-        const key = `${b}${s}|${prev}`;
-        let tp = typeMemo.get(key);
-        if (!tp) typeMemo.set(key, (tp = PM.typeProbs(q).probs));
-        const st = m.strategy || {};
-        let type = b === 0 && s === 0 && st.first >= 0 ? st.first : s === 2 && st.two >= 0 ? st.two : pick(tp, rng());
-        const zkey = `z${type}|${b}${s}`;
-        let zp = typeMemo.get(zkey);
-        if (!zp) {
-          const zr = zoneRatio(m.pitcher);
-          typeMemo.set(zkey, (zp = norm(PM.zoneProbs(q, type).probs.map((v, z) => v * zoneAdj[b * 3 + s][z] * zr[z < 9 ? 1 : 0]))));
-        }
-        const zone = pick(zp, rng());
-        const pool = real.get(`${type}|${zone}|${m.stance}`) || real.get(`${type}|${zone}`) || real.get(`${type}`);
-        const realIdx = pool ? pool[Math.floor(rng() * pool.length)] : -1;
+        const { type, zone, real: realIdx, q } = nextPitch(m, b, s, prev, rng);
         const res = pick(resultProbs(q, type, zone), rng());
         const pitch = { type, zone, res, balls: b, strikes: s, real: realIdx };
         pitches.push(pitch);
@@ -237,7 +242,101 @@
       return { n, counts, pitchesPerPA: pitchesN / n, strikeoutPitch: finish };
     }
 
-    return { simulatePA, batch, resultProbs, bipProbs, rng: mulberry32 };
+    /* ================= 직접 해보기(게임) ================= */
+    const X = ctx.X, Z = ctx.Z;  // 홈플레이트 통과 위치 (1/100 ft, 높이는 리그 평균 존에 맞춰 정규화)
+
+    // 공 하나의 결과로 카운트를 진행한다. 타석이 끝나면 end에 결과 이름
+    function advance(b, s, res, bip) {
+      if (res === 0) { b++; if (b === 4) return { balls: b, strikes: s, end: "볼넷" }; }
+      else if (res === 1 || res === 2) { s++; if (s === 3) return { balls: b, strikes: s, end: "삼진" }; }
+      else if (res === 3) { if (s < 2) s++; }
+      else if (res === 5) return { balls: b, strikes: s, end: "사구" };
+      else if (res === 4) return { balls: b, strikes: s, end: BIP[bip] };
+      return { balls: b, strikes: s, end: null };
+    }
+
+    // 심판: 타자가 치지 않은 공이 스트라이크로 불린 비율 (코스, 카운트 상황). 2026 실제 판정 기준
+    const callT = new Map(), callN = new Map();
+    for (let i = 0; i < N; i++) {
+      if ((cls[i] !== 0 && cls[i] !== 1) || ZN[i] == null) continue;
+      const z = ZN[i], k = z * 4 + cg(balls(S[i]), strikes(S[i]));
+      for (const key of [k, 100 + z]) { callN.set(key, (callN.get(key) || 0) + 1); callT.set(key, (callT.get(key) || 0) + (cls[i] === 1)); }
+    }
+    function calledStrikeProb(zone, b, s) {
+      const zp = (callT.get(100 + zone) || 0) / (callN.get(100 + zone) || 1), k = zone * 4 + cg(b, s);
+      return ((callT.get(k) || 0) + 20 * zp) / ((callN.get(k) || 0) + 20);
+    }
+
+    // 투수 모드: 노린 곳 근처에서 이 투수가 이 구종으로 실제 던진 공 하나를 고른다.
+    // 흩어짐은 이 투수의 그 구종 실제 위치 분산에 비례해서, 제구가 좋은 투수일수록 노린 곳에 잘 간다.
+    const AIM_K = 0.6;
+    const spreadCache = new Map();
+    function pitchesOf(pitcher, type) {
+      const key = pitcher * 64 + type;
+      let e = spreadCache.get(key);
+      if (e) return e;
+      const idx = [];
+      let mx = 0, mz = 0;
+      for (let i = 0; i < N; i++) if (P[i] === pitcher && T[i] === type && X[i] != null && Z[i] != null) { idx.push(i); mx += X[i]; mz += Z[i]; }
+      mx /= idx.length || 1; mz /= idx.length || 1;
+      let vx = 0, vz = 0;
+      for (const i of idx) { vx += (X[i] - mx) ** 2; vz += (Z[i] - mz) ** 2; }
+      e = { idx, sx: Math.sqrt(vx / (idx.length || 1)) / 100, sz: Math.sqrt(vz / (idx.length || 1)) / 100 };
+      spreadCache.set(key, e);
+      return e;
+    }
+    function aimPitch(pitcher, type, x, z, rng, k = AIM_K) {
+      const { idx, sx, sz } = pitchesOf(pitcher, type);
+      if (!idx.length) return null;
+      const ax = Math.max(0.15, k * sx), az = Math.max(0.15, k * sz);
+      const w = idx.map((i) => Math.exp(-(((X[i] / 100 - x) / ax) ** 2 + ((Z[i] / 100 - z) / az) ** 2) / 2));
+      const sum = w.reduce((a, v) => a + v, 0);
+      const i = sum > 0 ? idx[pick(w.map((v) => v / sum), rng())] : idx[Math.floor(rng() * idx.length)];
+      return { real: i, zone: ZN[i], x: X[i] / 100, z: Z[i] / 100, spread: [sx, sz] };
+    }
+    // 투수 모드: 던진 공에 대한 타자 반응 (시뮬레이터와 같은 결과 모델)
+    function batterReacts(m, b, s, type, zone, rng) {
+      const q = { pitcher: m.pitcher, batter: m.batter, stance: m.stance, balls: b, strikes: s };
+      const res = pick(resultProbs(q, type, zone), rng());
+      return { res, bip: res === 4 ? pick(bipProbs(q, type, zone), rng()) : null };
+    }
+    // 투수 모드 힌트: 코스별로 이 공을 던지면 생기는 기대 실점 변화 (타자 기준, 음수가 투수에게 좋음)
+    function zoneValues(m, b, s, type, countValue, paValue) {
+      const q = { pitcher: m.pitcher, batter: m.batter, stance: m.stance, balls: b, strikes: s };
+      const cv = (bb, ss) => countValue[`${Math.min(bb, 3)}${Math.min(ss, 2)}`] || 0, now = cv(b, s);
+      const bipName = { "직선타": "라인드라이브", "실책": "실책출루" };
+      const out = [];
+      for (let zone = 0; zone < NZ; zone++) {
+        const pr = resultProbs(q, type, zone), bp = bipProbs(q, type, zone);
+        let v = 0;
+        pr.forEach((p, res) => {
+          if (res === 4) { bp.forEach((pb, k) => { v += p * pb * ((paValue[bipName[BIP[k]] || BIP[k]] || 0) - now); }); return; }
+          const a = advance(b, s, res, null);
+          v += p * ((a.end ? paValue[a.end] || 0 : cv(a.balls, a.strikes)) - now);
+        });
+        out.push({ zone, value: v, whiff: pr[2] / (pr[2] + pr[3] + pr[4]) });
+      }
+      return out;
+    }
+
+    // 타자 모드: 사용자의 스윙 판정. dt는 공 시간 기준 타이밍 오차(초, +가 늦음), dx·dz는 친 위치와 공의 좌우·높이 차이(ft).
+    // 배트는 가로로 길어서 좌우 오차(0.8ft ≈ 24cm)는 높이 오차(0.4ft ≈ 12cm)보다 관대하게 본다.
+    const SWING = { dt: 0.075, dx: 0.8, dz: 0.4 };
+    const TILT = [0.6, 1.4, 1.4, 2.4, -0.6, -0.2, 0.2, 0];  // 잘 맞을수록 1루타~홈런 쪽으로, 빗맞으면 땅볼 쪽으로
+    function swingResult(m, b, s, type, zone, swing, rng) {
+      const q = { pitcher: m.pitcher, batter: m.batter, stance: m.stance, balls: b, strikes: s };
+      if (!swing) return { res: rng() < calledStrikeProb(zone, b, s) ? 1 : 0, bip: null, quality: null };
+      const e = Math.hypot(swing.dt / SWING.dt, swing.dx / SWING.dx, swing.dz / SWING.dz);
+      if (e > 1) return { res: 2, bip: null, quality: 0, miss: e };
+      const quality = 1 - e;
+      if (rng() < 0.12 + 0.55 * e) return { res: 3, bip: null, quality };  // 빗맞으면 파울이 많다
+      const base = bipProbs(q, type, zone);
+      const p = norm(base.map((v, k) => v * Math.exp(TILT[k] * (quality - 0.5) * 2)));
+      return { res: 4, bip: pick(p, rng()), quality };
+    }
+
+    return { simulatePA, batch, resultProbs, bipProbs, rng: mulberry32,
+      advance, calledStrikeProb, aimPitch, batterReacts, zoneValues, swingResult, pitchesOf, nextPitch, SWING };
   }
 
   const api = { create, RESULTS, BIP, mulberry32 };
