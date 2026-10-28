@@ -1,11 +1,16 @@
+<!doctype html>
+<html lang="ko">
+<head>
 <meta charset="utf-8">
-<title>KBO 볼배합 탐색기</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="2026 KBO 투수의 실제 기록으로 구종과 다음 공을 살펴보고, 타석을 직접 체험해 보세요.">
+<title>KBO 투수 분석 · 볼배합 탐색기</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: 상단 바(검색) → 남색 선수 카드(지표·구종 막대) → 핵심 포인트 → 상황 필터 → 탭(개요 / 궤적·무브먼트 / 터널링 / 카운트). 색은 야구공의 남색 가죽과 빨간 실밥. */
+/* KBO 투수 기록과 구종 분석. */
 :root {
   --bg: #edf0f4;
   --surface: #ffffff;
@@ -102,7 +107,7 @@ button, select, input { font: inherit; color: inherit; }
 .hero .stitch { position: absolute; right: -60px; top: -40px; width: 360px; height: 360px; opacity: 0.55; pointer-events: none; }
 .hero-top { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 18px; }
 .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; color: var(--on-navy-muted); }
-.hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 4px 0 0; letter-spacing: 0.01em; text-wrap: balance; }
+.hero h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 6vw, 56px); line-height: 1; margin: 4px 0 0; letter-spacing: 0.01em; text-wrap: balance; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 6px; }
 .badge { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: rgb(255 255 255 / 0.1); border: 1px solid rgb(255 255 255 / 0.16); white-space: nowrap; }
 .badge.hand { background: var(--accent); border-color: transparent; color: #fff; }
@@ -360,12 +365,144 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-</style>
 
+/* 사용자 중심 화면: 찾기 → 요약 → 원하는 분석으로 자연스럽게 이동 */
+body { margin: 0; font-size: 15px; }
+.wrap { max-width: 1320px; gap: 16px; }
+#main-content { display: grid; gap: 16px; min-width: 0; }
+.topbar {
+  position: static;
+  display: grid; grid-template-columns: minmax(220px, 1fr) minmax(360px, 560px);
+  gap: 16px 28px; padding: 14px 0; border-bottom: 1px solid var(--line);
+}
+.brand { gap: 12px; }
+.brand b { font-size: 22px; }
+.brand small { font-size: 12px; }
+.pick {
+  width: 100%; display: grid; grid-template-columns: minmax(120px, .72fr) minmax(0, 1.5fr);
+  gap: 8px; align-items: center;
+}
+.pick select, .combo input { min-height: 46px; border-radius: 12px; font-size: 15px; }
+.pick select { width: 100%; padding-inline: 12px; }
+.combo { width: 100%; }
+.combo input { padding-left: 38px; }
+.search-hint { grid-column: 2; margin-top: -5px; color: var(--muted); font-size: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+.welcome {
+  position: relative; display: grid; grid-template-columns: minmax(240px, .9fr) minmax(0, 1.35fr);
+  align-items: center; gap: 22px; padding: 20px 24px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow);
+}
+.welcome::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--accent); }
+.welcome-copy { min-width: 0; }
+.welcome-kicker { margin: 0 0 4px; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.welcome-copy h1 { margin: 0; font-family: var(--font-display); font-size: clamp(22px, 3vw, 30px); font-weight: 400; line-height: 1.25; text-wrap: balance; }
+.welcome-copy p:last-child { max-width: 48ch; margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+.welcome-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.welcome-actions button {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto;
+  align-content: center; align-items: center; gap: 2px 8px; min-width: 0; min-height: 76px;
+  padding: 10px; text-align: left; color: var(--ink); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 12px; cursor: pointer;
+  transition: border-color .18s, transform .18s, background .18s;
+}
+.welcome-actions button:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-2px); }
+.welcome-actions .step { grid-row: 1 / span 2; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #fff; background: var(--accent); font-family: var(--font-data); font-size: 11px; font-weight: 700; }
+.welcome-actions b { font-size: 13px; line-height: 1.3; }
+.welcome-actions small { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.skip-link { position: fixed; z-index: 60; top: 8px; left: 8px; transform: translateY(-160%); padding: 10px 14px; color: #fff; background: var(--navy); border-radius: 10px; font-weight: 700; }
+.skip-link:focus { transform: translateY(0); }
+
+.hero { border-radius: 20px; padding: 26px 30px 22px; }
+.hero h2 { font-size: clamp(32px, 5vw, 50px); }
+.insight { border-radius: 12px; box-shadow: var(--shadow); }
+.filterbar { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.filter-intro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; }
+.filter-intro b { font-size: 14px; }
+.filter-intro span { color: var(--muted); font-size: 12px; }
+.quick { gap: 7px; }
+.qchip, .more { min-height: 40px; padding: 7px 13px; }
+.fields { border-radius: 12px; }
+.tabs { top: env(safe-area-inset-top, 0px); padding: 12px 14px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.tabs-intro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 9px 2px; }
+.tabs-intro b { font-size: 14px; }
+.tabs-intro span { color: var(--muted); font-size: 12px; }
+.tablist { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; min-width: 0; border: 0; }
+.tab { min-width: 0; min-height: 46px; padding: 8px 7px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.3; white-space: normal; }
+.tab:hover { border-color: var(--accent); color: var(--ink); }
+.tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+.tab-ink { display: none; }
+.tabpanel { scroll-margin-top: 150px; gap: 16px; }
+.panel { padding: 20px; border-radius: 16px; box-shadow: var(--shadow); }
+.panel h2 { font-size: 17px; }
+.panel .sub { font-size: 13px; line-height: 1.65; }
+.field select { min-height: 42px; font-size: 14px; }
+.seg button, .btn2 { min-height: 40px; }
+.playbtn { min-height: 40px; padding: 8px 14px; font-size: 13px; }
+.foot { padding: 12px 4px 0; line-height: 1.65; }
+
+@media (max-width: 1080px) {
+  .topbar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .pick { max-width: 620px; }
+  .tablist { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .welcome { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+}
+@media (max-width: 700px) {
+  body { padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); padding-bottom: 28px; }
+  .wrap { gap: 12px; }
+  .topbar { position: static; padding-block: 12px; }
+  .brand b { font-size: 20px; }
+  .pick { grid-template-columns: minmax(108px, .78fr) minmax(0, 1.3fr); }
+  .search-hint { font-size: 11px; }
+  .welcome { padding: 17px 16px 16px 19px; gap: 12px; }
+  .welcome-copy p:last-child { margin-top: 5px; }
+  .welcome-actions { gap: 6px; }
+  .welcome-actions button { grid-template-columns: 24px minmax(0, 1fr); min-height: 72px; padding: 8px 6px; gap: 2px 5px; }
+  .welcome-actions .step { width: 24px; height: 24px; font-size: 10px; }
+  .welcome-actions b { font-size: 12px; }
+  .welcome-actions small { font-size: 10px; }
+  .hero { padding: 20px 18px; gap: 16px; }
+  .hero .stitch { width: 240px; height: 240px; right: -90px; top: -60px; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 8px; padding-top: 13px; }
+  .stat { padding-right: 4px; }
+  .stat b { font-size: 22px; }
+  .insights { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .insight { padding: 11px; }
+  .insight .v { font-size: 15px; }
+  .insight .d { font-size: 12px; }
+  .filterbar { padding: 12px; }
+  .quick { gap: 6px; }
+  .qchip, .more { min-height: 38px; padding: 6px 10px; font-size: 12px; }
+  .more { margin-left: 0; }
+  .tabs { position: static !important; padding: 11px; }
+  .tablist { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .tab { min-height: 48px; padding: 7px 5px; font-size: 12px; }
+  .panel { padding: 15px; border-radius: 14px; }
+  .tablewrap { margin-inline: -4px; }
+  th { font-size: 11px; padding: 7px 6px; }
+  td { font-size: 12px; padding: 8px 6px; }
+  .game-top { align-items: stretch; }
+  .game-top .field { min-width: min(100%, 150px); }
+  .modeseg { flex: 1 1 100%; }
+  .modeseg button { min-height: 44px; }
+  .gstage { aspect-ratio: 1 / 1; }
+}
+@media (max-width: 390px) {
+  .welcome-actions { grid-template-columns: 1fr; }
+  .welcome-actions button { grid-template-columns: 28px minmax(0, 1fr); min-height: 52px; }
+  .welcome-actions .step { width: 26px; height: 26px; }
+  .tablist { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .insights { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) { .tabpanel { scroll-margin-top: 14px; } }
+</style>
+</head>
+<body>
 <div class="wrap" id="app">
   <div class="loading" id="loading">
     <svg class="ball" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="var(--surface)" stroke="var(--line)" stroke-width="2"/><path d="M14 12c8 8 8 32 0 40M50 12c-8 8-8 32 0 40" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="3 3"/></svg>
-    <div><b style="color:var(--ink)">2026 KBO 투구 데이터를 불러오는 중</b><br>22만 구 · 약 9MB</div>
+    <div><b style="color:var(--ink)">2026 KBO 기록을 준비하고 있어요</b><br>시즌 투구 데이터를 불러오는 중입니다.</div>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -398,11 +535,11 @@ const PRESETS = [
   { id: "two", label: "2스트라이크", set: { count: "two" } },
   { id: "behind", label: "타자 유리 카운트", set: { count: "behind" } },
   { id: "risp", label: "득점권", set: { runner: "risp" } },
-  { id: "putaway", label: "결정구", set: { scope: "last" } },
-  { id: "kpitch", label: "삼진 잡은 공", set: { scope: "last", pa: "so" } },
+  { id: "putaway", label: "마지막 공", set: { scope: "last" } },
+  { id: "kpitch", label: "삼진으로 끝난 공", set: { scope: "last", pa: "so" } },
 ];
 const PRESET_KEYS = [...new Set(PRESETS.flatMap((p) => Object.keys(p.set)))];
-const FILTER_LABEL = { stance: "타석", count: "카운트", runner: "주자", outs: "아웃", score: "점수", month: "기간", round: "구분", scope: "범위", pa: "타석 결과" };
+const FILTER_LABEL = { stance: "타석", count: "카운트", runner: "주자", outs: "아웃", score: "점수", month: "기간", round: "구분", scope: "투구 범위", pa: "타석 결과" };
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $ = (id) => document.getElementById(id);
@@ -499,25 +636,43 @@ const STITCH = `<svg class="stitch" viewBox="0 0 200 200" aria-hidden="true"><ci
 
 function shell() {
   $("app").innerHTML = `
+  <a class="skip-link" href="#main-content">분석 내용으로 바로가기</a>
   <header class="topbar">
     <div class="brand">
       <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="var(--surface)" stroke="var(--ink)" stroke-width="3"/><path d="M14 12c8 8 8 32 0 40M50 12c-8 8-8 32 0 40" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="4 4"/></svg>
-      <b>KBO 볼배합 탐색기</b><small id="season"></small>
+      <div><b>KBO 투수 분석</b><small id="season"></small></div>
     </div>
-    <div class="pick">
-      <select id="f-team" aria-label="팀"></select>
+    <div class="pick" aria-label="팀과 투수 선택">
+      <label class="sr-only" for="f-team">구단 선택</label>
+      <select id="f-team" aria-label="구단 선택"></select>
       <div class="combo">
         <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <input id="p-search" type="text" role="combobox" aria-expanded="false" aria-controls="p-list" aria-autocomplete="list" placeholder="투수 이름 검색" autocomplete="off">
+        <label class="sr-only" for="p-search">투수 이름 검색</label>
+        <input id="p-search" type="text" role="combobox" aria-label="투수 이름 검색" aria-expanded="false" aria-controls="p-list" aria-autocomplete="list" placeholder="투수 이름으로 검색" autocomplete="off">
         <ul id="p-list" role="listbox" aria-label="투수" hidden></ul>
       </div>
+      <span class="search-hint">구단을 고르거나 투수 이름을 검색하세요</span>
     </div>
   </header>
 
+  <section class="welcome" aria-label="빠른 시작">
+    <div class="welcome-copy">
+      <p class="welcome-kicker">2026 KBO 시즌</p>
+      <h1>실제 기록으로 투구를 쉽게 살펴보세요.</h1>
+      <p>팀이나 투수를 고른 뒤, 보고 싶은 내용부터 시작하면 됩니다.</p>
+    </div>
+    <div class="welcome-actions">
+      <button type="button" data-jump-tab="overview"><span class="step">01</span><b>투수 기록 보기</b><small>구종·코스·결과 한눈에</small></button>
+      <button type="button" data-jump-tab="predict"><span class="step">02</span><b>다음 공 예상</b><small>상황별 구종과 코스</small></button>
+      <button type="button" data-jump-tab="play"><span class="step">03</span><b>직접 던지고 치기</b><small>한 타석 플레이</small></button>
+    </div>
+  </section>
+
+  <main id="main-content">
   <section class="hero" aria-live="polite">
     ${STITCH}
     <div class="hero-top">
-      <div><div class="eyebrow" id="h-eyebrow"></div><h1 id="h-name"></h1></div>
+      <div><div class="eyebrow" id="h-eyebrow"></div><h2 id="h-name"></h2></div>
       <div class="badges" id="h-badges"></div>
     </div>
     <div class="stats" id="h-stats"></div>
@@ -527,9 +682,10 @@ function shell() {
   <section class="insights" id="insights" aria-label="핵심 포인트"></section>
 
   <section class="filterbar" aria-label="상황 필터">
+    <div class="filter-intro"><b>상황별로 보기</b><span>빠른 조건을 고르면 요약과 차트가 함께 바뀝니다.</span></div>
     <div class="quick" id="quick">
       ${PRESETS.map((p) => `<button type="button" class="qchip" data-preset="${p.id}" aria-pressed="false">${p.label}</button>`).join("")}
-      <button type="button" class="more" id="more" aria-expanded="false" aria-controls="drawer">상황 필터 <span class="n" id="more-n" hidden></span>
+      <button type="button" class="more" id="more" aria-expanded="false" aria-controls="drawer">전체 필터 <span class="n" id="more-n" hidden></span>
         <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     </div>
     <div class="active" id="active"></div>
@@ -541,7 +697,7 @@ function shell() {
       <div class="field"><label for="f-count">카운트</label><select id="f-count"></select></div>
       <div class="field"><span class="flabel" id="l-scope">투구 범위</span>
         <div class="seg" id="f-scope" role="group" aria-labelledby="l-scope">
-          <button type="button" data-v="all" aria-pressed="true">모든 공</button><button type="button" data-v="last" aria-pressed="false">결정구</button>
+          <button type="button" data-v="all" aria-pressed="true">모든 공</button><button type="button" data-v="last" aria-pressed="false">마지막 공</button>
         </div></div>
       <div class="field"><label for="f-pa">타석 결과</label>
         <select id="f-pa"><option value="all">전체</option><option value="so">삼진</option><option value="bb">볼넷·사구</option><option value="hit">안타</option>
@@ -563,15 +719,16 @@ function shell() {
     </div></div></div>
   </section>
 
-  <nav class="tabs" aria-label="분석 화면">
+  <nav class="tabs" aria-label="분석 기능">
+    <div class="tabs-intro"><b>무엇을 볼까요?</b><span>원하는 기능을 선택하세요.</span></div>
     <div class="tablist" role="tablist" id="tablist">
-      <button type="button" class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">개요</button>
+      <button type="button" class="tab" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">투수 한눈에</button>
       <button type="button" class="tab" role="tab" id="tab-predict" aria-controls="predict" aria-selected="false" data-tab="predict">다음 공 예측</button>
-      <button type="button" class="tab" role="tab" id="tab-sim" aria-controls="sim" aria-selected="false" data-tab="sim">시뮬레이션</button>
-      <button type="button" class="tab" role="tab" id="tab-play" aria-controls="play" aria-selected="false" data-tab="play">직접 해보기</button>
-      <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">궤적 · 무브먼트</button>
-      <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">터널링</button>
-      <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">카운트별 볼배합</button>
+      <button type="button" class="tab" role="tab" id="tab-sim" aria-controls="sim" aria-selected="false" data-tab="sim">가상 타석</button>
+      <button type="button" class="tab" role="tab" id="tab-play" aria-controls="play" aria-selected="false" data-tab="play">직접 플레이</button>
+      <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">공의 움직임</button>
+      <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">구종 비교</button>
+      <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">상황별 구종</button>
       <span class="tab-ink" id="tab-ink"></span>
     </div>
   </nav>
@@ -587,12 +744,12 @@ function shell() {
       <div class="stackcol">
         <section class="panel" aria-labelledby="h-mix">
           <h2 id="h-mix">구종 구성</h2>
-          <p class="sub">구속 km/h · S% = 볼이 아닌 공 비율 · 헛스윙% = 스윙 중 헛스윙 비율</p>
+          <p class="sub">구속은 km/h입니다. 스트라이크%는 볼이 아닌 공의 비율, 헛스윙%는 스윙 중 헛스윙 비율입니다.</p>
           <div class="tablewrap"><table id="mix"></table></div>
         </section>
         <section class="panel" aria-labelledby="h-fin">
-          <h2 id="h-fin">결정구 결과</h2>
-          <p class="sub">타석의 마지막 공을 구종별로 모은 결과 · 피안타율 = 안타 ÷ 타수 (볼넷·사구·희생타 제외)</p>
+          <h2 id="h-fin">타석을 끝낸 공</h2>
+          <p class="sub">각 타석의 마지막 공을 구종별로 모았습니다. 피안타율은 타수 대비 안타 비율입니다.</p>
           <div class="tablewrap"><table id="fin"></table></div>
         </section>
       </div>
@@ -739,7 +896,7 @@ function shell() {
   <section class="tabpanel" role="tabpanel" id="tunnel" aria-labelledby="tab-tunnel" hidden>
     <section class="panel" aria-labelledby="h-tun">
       <div class="phead">
-        <div><h2 id="h-tun">터널링</h2>
+        <div><h2 id="h-tun">두 구종 비교</h2>
         <p class="sub">두 구종이 언제까지 같은 길로 오다가 갈라지는지 봅니다. 타자 판단 시점은 홈 도착 0.167초 전(홈에서 약 7m)으로, 이때 가까울수록 타자가 구종을 구분하기 어렵습니다. 갈라짐 배율 = 홈 도착 차이 ÷ 판단 시점 차이이고, 클수록 늦게 갈라져 타자를 속이기 좋습니다.</p></div>
         <div class="field tun-base"><label for="tun-base">기준 구종</label><select id="tun-base"></select></div>
       </div>
@@ -791,12 +948,13 @@ function shell() {
 
   <section class="tabpanel" role="tabpanel" id="counts-tab" aria-labelledby="tab-counts" hidden>
     <section class="panel" aria-labelledby="h-count">
-      <h2 id="h-count">카운트별 볼배합</h2>
+      <h2 id="h-count">상황별 구종 선택</h2>
       <p class="sub">투구 직전 카운트(볼-스트라이크)마다 어떤 구종을 던졌는지. 막대에 마우스를 올리면 개수가 나옵니다.</p>
       <div class="counts" id="counts"></div>
     </section>
   </section>
 
+  </main>
   <footer class="foot">
     <span>데이터: 네이버 스포츠 문자중계 투구 추적값 (2026 정규시즌·포스트시즌). 좌우 위치·높이 단위는 ft(30.48cm), 스트라이크존은 타자별 존을 리그 평균 높이에 맞춰 정규화했습니다.</span>
     <span>회전수는 원본에 없어 제공하지 않습니다. 투구 추적값이 없는 공은 위치·궤적 그림에서만 빠집니다.</span>
@@ -872,7 +1030,7 @@ function filterText(k) {
   const v = state[k];
   if (k === "stance") return v === "L" ? "좌타" : "우타";
   if (k === "outs") return `${v}아웃`;
-  if (k === "scope") return "결정구만";
+  if (k === "scope") return "마지막 공만";
   const el = $("f-" + k), opt = el && [...el.options].find((o) => o.value === v);
   return opt ? opt.textContent : v;
 }
@@ -1030,7 +1188,7 @@ function renderInsights(agg) {
     : `<div class="v" style="color:var(--faint)">–</div><div class="d">이 조건에 해당하는 공이 없습니다</div>`) + `</article>`;
   $("insights").innerHTML =
     card("주무기", main, (x) => `전체 투구의 <b>${x.p.toFixed(0)}%</b>`) +
-    card("삼진 잡는 결정구", put, (x) => `결정구로 쓴 <b>${fmt(x.pa)}</b>타석 중 삼진 <b>${pct(x.k, x.pa).toFixed(0)}%</b>`) +
+    card("삼진으로 끝나는 구종", put, (x) => `타석 마지막 공으로 <b>${fmt(x.pa)}</b>번 사용 · 삼진 <b>${pct(x.k, x.pa).toFixed(0)}%</b>`) +
     card("초구", first, (x) => `0-0에서 <b>${x.p.toFixed(0)}%</b> · ${fmt(x.n)}구 중`) +
     card("2스트라이크 이후", two, (x) => `<b>${x.p.toFixed(0)}%</b>` + (behind ? ` · 불리할 땐 ${esc(D.types[behind.t])} ${behind.p.toFixed(0)}%` : ""));
 }
@@ -1040,7 +1198,7 @@ function renderMix(agg) {
   const total = sel.length;
   const rows = agg.by.map((a, t) => ({ t, ...a })).filter((r) => r.n > 0).sort((a, b) => b.n - a.n);
   const maxShare = rows.length ? rows[0].n / total : 1;
-  $("mix").innerHTML = `<thead><tr><th>구종</th><th>투구 수</th><th>비율</th><th>평균</th><th>최고</th><th>S%</th><th>헛스윙%</th></tr></thead><tbody>` +
+  $("mix").innerHTML = `<thead><tr><th>구종</th><th>투구 수</th><th>비율</th><th>평균</th><th>최고</th><th>스트라이크%</th><th>헛스윙%</th></tr></thead><tbody>` +
     (rows.length ? rows.map((r) => `<tr><td><span class="tname"><i style="background:${colors[r.t]}"></i>${esc(D.types[r.t])}</span></td>
         <td>${fmt(r.n)}</td>
         <td><span class="bar" style="width:${Math.max(3, 48 * (r.n / total) / maxShare)}px;background:${colors[r.t]}"></span>${pct(r.n, total).toFixed(1)}%</td>
@@ -1664,7 +1822,7 @@ function renderPredict() {
     for (const id of ["pq-result", "pq-value", "pq-znotes"]) $(id).innerHTML = "";
     $("pq-zone").innerHTML = ""; $("pq-ztype").innerHTML = ""; $("pq-prev").innerHTML = "";
     $("pset-who").textContent = "";
-    root.innerHTML = `<div class="empty-state">위 검색창에서 투수를 한 명 고르면 다음 공을 예측합니다.</div>`;
+    root.innerHTML = `<div class="empty-state">상단에서 구단과 투수를 선택하면 다음 공 예측을 볼 수 있어요.</div>`;
     return;
   }
   const m = ensurePredictModel();
@@ -1799,7 +1957,7 @@ function syncSim() {
 function renderSim() {
   if (!$("sim-root") || $("sim").hidden) return;
   if (state.pitcher === "all") {
-    $("sim-out").innerHTML = `<div class="empty-state">위 검색창에서 투수를 한 명 고르면 맞대결을 시뮬레이션합니다.</div>`;
+    $("sim-out").innerHTML = `<div class="empty-state">상단에서 구단과 투수를 선택하면 가상 타석을 시작할 수 있어요.</div>`;
     $("sset-who").textContent = ""; $("sim-matchup").textContent = "";
     return;
   }
@@ -2052,7 +2210,7 @@ function zoneCenterOnScreen() { const pr = projector("catcher", gW, gH); return 
 function renderGame() {
   if (!$("play-root") || $("play").hidden) return;
   if (state.pitcher === "all") {
-    $("g-sub").textContent = "위 검색창에서 투수를 한 명 고르면 시작합니다."; gm.pitcher = null; return;
+    $("g-sub").textContent = "상단에서 구단과 투수를 선택하면 플레이를 시작할 수 있어요."; gm.pitcher = null; return;
   }
   const pitcher = +state.pitcher;
   if (gm.pitcher === pitcher) { if (!gRaf) drawGame(); return; }
@@ -2312,6 +2470,12 @@ function showTab(tab, focus) {
 }
 function bindTabs() {
   $("tablist").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) showTab(b.dataset.tab); });
+  document.querySelector(".welcome-actions").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-jump-tab]"); if (!b) return;
+    const tab = b.dataset.jumpTab;
+    showTab(tab);
+    panelOf(tab).scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+  });
   $("tablist").addEventListener("keydown", (e) => {
     const k = TABS.indexOf(currentTab);
     if (e.key === "ArrowRight") showTab(TABS[(k + 1) % TABS.length], true);
@@ -2355,3 +2519,5 @@ fetch("pitches.json").then((r) => { if (!r.ok) throw new Error(r.status); return
 });
 })();
 </script>
+</body>
+</html>
