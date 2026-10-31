@@ -308,6 +308,51 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 .pitchlog .no { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-family: var(--font-data); font-size: 12px; font-weight: 700; }
 .pitchlog .what { min-width: 0; }
 .pitchlog .what small { display: block; color: var(--muted); font-size: 12px; }
+/* 투수 컨디션 */
+.cd-games { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.cd-game { display: grid; gap: 2px; min-width: 150px; padding: 9px 14px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--ink); cursor: pointer; transition: border-color .18s, background .18s; }
+.cd-game:hover { border-color: var(--accent); }
+.cd-game[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.cd-game b { font-size: 14px; }
+.cd-game small { color: var(--muted); font-size: 12px; }
+.cd-custom { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 10px; margin-top: 12px; }
+.cd-custom .field { min-width: 120px; }
+.cd-custom .vs { padding-bottom: 10px; color: var(--muted); font-weight: 700; }
+.cd-match { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.cd-team h2 { display: flex; align-items: baseline; gap: 8px; }
+.cd-team h2 small { color: var(--muted); font-size: 12px; font-weight: 500; }
+.cd-sp { display: grid; gap: 6px; margin: 12px 0 14px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 13px; }
+.cd-sp .lead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.cd-sp .lead b { font-size: 17px; }
+.cd-sp .hit { font-weight: 700; color: var(--pt-ch); }
+.cd-sp .miss { font-weight: 700; color: var(--accent); }
+.cd-sum { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.vpill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.vpill.v0 { color: var(--pt-ch); background: color-mix(in srgb, var(--pt-ch) 14%, transparent); }
+.vpill.v1 { color: color-mix(in srgb, var(--pt-fc) 75%, var(--ink)); background: color-mix(in srgb, var(--pt-fc) 18%, transparent); }
+.vpill.v2 { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.cd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cd-table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.cd-table td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+.cd-table td.cd-note { white-space: normal; min-width: 90px; line-height: 1.4; }
+.cd-table tr.sec td { padding-top: 12px; font-size: 11px; font-weight: 700; color: var(--muted); border-bottom: 0; }
+.cd-name { display: inline; padding: 0; border: 0; background: none; color: var(--ink); font-weight: 600; cursor: pointer; text-align: left; }
+.cd-name:hover { color: var(--accent); text-decoration: underline; }
+.cd-name small { color: var(--muted); font-weight: 400; margin-left: 3px; }
+.fbar { position: relative; width: 64px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.fbar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; }
+.ftxt { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.last5 { display: grid; grid-template-columns: repeat(5, 22px); gap: 2px; }
+.last5 span { height: 20px; display: grid; place-items: center; border-radius: 4px; font-family: var(--font-data); font-size: 10px; color: var(--muted); background: var(--surface-2); }
+.last5 span.on { color: #fff; }
+.cd-note { color: var(--muted); font-size: 12px; }
+.cd-note b { color: var(--accent); font-weight: 600; }
+.cd-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.cd-eval { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.cd-eval div { padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 12px; color: var(--muted); }
+.cd-eval b { display: block; font-family: var(--font-data); font-size: 20px; color: var(--ink); }
+@media (max-width: 900px) { .cd-match { grid-template-columns: minmax(0, 1fr); } .cd-eval { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .cd-table .c-last5, .cd-table .c-fb { display: none; } }
 .lineup { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .lineup li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 10px; font-size: 13px; }
 .lineup li.now { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
@@ -411,7 +456,7 @@ body { margin: 0; font-size: 15px; }
 .welcome-kicker { margin: 0 0 4px; color: var(--accent); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .welcome-copy h1 { margin: 0; font-family: var(--font-display); font-size: clamp(22px, 3vw, 30px); font-weight: 400; line-height: 1.25; text-wrap: balance; }
 .welcome-copy p:last-child { max-width: 48ch; margin: 7px 0 0; color: var(--muted); font-size: 13px; }
-.welcome-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.welcome-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
 .welcome-actions button {
   display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto;
   align-content: center; align-items: center; gap: 2px 8px; min-width: 0; min-height: 76px;
@@ -440,7 +485,7 @@ body { margin: 0; font-size: 15px; }
 .tabs-intro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 9px 2px; }
 .tabs-intro b { font-size: 14px; }
 .tabs-intro span { color: var(--muted); font-size: 12px; }
-.tablist { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; min-width: 0; border: 0; }
+.tablist { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; min-width: 0; border: 0; }
 .tab { min-width: 0; min-height: 46px; padding: 8px 7px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); color: var(--muted); font-size: 13px; line-height: 1.3; white-space: normal; }
 .tab:hover { border-color: var(--accent); color: var(--ink); }
 .tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 700; }
@@ -469,7 +514,7 @@ body { margin: 0; font-size: 15px; }
   .search-hint { font-size: 11px; }
   .welcome { padding: 17px 16px 16px 19px; gap: 12px; }
   .welcome-copy p:last-child { margin-top: 5px; }
-  .welcome-actions { gap: 6px; }
+  .welcome-actions { gap: 6px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .welcome-actions button { grid-template-columns: 24px minmax(0, 1fr); min-height: 72px; padding: 8px 6px; gap: 2px 5px; }
   .welcome-actions .step { width: 24px; height: 24px; font-size: 10px; }
   .welcome-actions b { font-size: 12px; }
@@ -677,6 +722,7 @@ function shell() {
       <button type="button" data-jump-tab="overview"><span class="step">01</span><b>투수 기록 보기</b><small>구종·코스·결과 한눈에</small></button>
       <button type="button" data-jump-tab="predict"><span class="step">02</span><b>다음 공 예상</b><small>상황별 구종과 코스</small></button>
       <button type="button" data-jump-tab="play"><span class="step">03</span><b>직접 던지고 치기</b><small>한 타석 플레이</small></button>
+      <button type="button" data-jump-tab="condition"><span class="step">04</span><b>오늘 투수 컨디션</b><small>피로도·등판 가능 여부</small></button>
     </div>
   </section>
 
@@ -738,6 +784,7 @@ function shell() {
       <button type="button" class="tab" role="tab" id="tab-predict" aria-controls="predict" aria-selected="false" data-tab="predict">다음 공 예측</button>
       <button type="button" class="tab" role="tab" id="tab-sim" aria-controls="sim" aria-selected="false" data-tab="sim">가상 타석</button>
       <button type="button" class="tab" role="tab" id="tab-play" aria-controls="play" aria-selected="false" data-tab="play">직접 플레이</button>
+      <button type="button" class="tab" role="tab" id="tab-condition" aria-controls="condition" aria-selected="false" data-tab="condition">투수 컨디션</button>
       <button type="button" class="tab" role="tab" id="tab-trajectory" aria-controls="trajectory" aria-selected="false" data-tab="trajectory">공의 움직임</button>
       <button type="button" class="tab" role="tab" id="tab-tunnel" aria-controls="tunnel" aria-selected="false" data-tab="tunnel">구종 비교</button>
       <button type="button" class="tab" role="tab" id="tab-counts" aria-controls="counts-tab" aria-selected="false" data-tab="counts">상황별 구종</button>
@@ -879,6 +926,28 @@ function shell() {
         </section>
       </div>
     </div>
+  </section>
+
+  <section class="tabpanel" role="tabpanel" id="condition" aria-labelledby="tab-condition" hidden>
+    <section class="panel" id="cond-root" aria-labelledby="h-cond">
+      <div class="phead">
+        <div><h2 id="h-cond">경기별 투수 컨디션</h2>
+        <p class="sub" style="margin:0">날짜와 경기를 고르면 두 팀의 예상 선발과, 엔트리 투수마다 피로도·등판 가능 여부를 보여 줍니다. 그날 경기 전까지의 기록만 씁니다.</p></div>
+        <div class="field" style="min-width:210px"><label for="cd-date">날짜</label><select id="cd-date"></select></div>
+      </div>
+      <div class="cd-games" id="cd-games" role="group" aria-label="경기"></div>
+      <div class="cd-custom" id="cd-custom" hidden>
+        <div class="field"><label for="cd-away">원정</label><select id="cd-away"></select></div>
+        <span class="vs">vs</span>
+        <div class="field"><label for="cd-home">홈</label><select id="cd-home"></select></div>
+      </div>
+    </section>
+    <div class="cd-match" id="cd-match"><section class="panel"><div class="empty-state">투수 컨디션 데이터를 불러오는 중입니다.</div></section></div>
+    <section class="panel" aria-labelledby="h-cdm">
+      <h2 id="h-cdm">어떻게 판정하나요</h2>
+      <p class="sub" id="cd-method"></p>
+      <div class="cd-eval" id="cd-eval"></div>
+    </section>
   </section>
 
   <section class="tabpanel" role="tabpanel" id="trajectory" aria-labelledby="tab-trajectory" hidden>
@@ -2531,8 +2600,118 @@ function drawSwing(ctx, at, ink) {
   ctx.beginPath(); ctx.moveTo(at[0] - 8, at[1] - 8); ctx.lineTo(at[0] + 8, at[1] + 8); ctx.moveTo(at[0] + 8, at[1] - 8); ctx.lineTo(at[0] - 8, at[1] + 8); ctx.stroke();
 }
 
+/* ---------- 투수 컨디션 ---------- */
+const VCOL = ["var(--pt-ch)", "var(--pt-fc)", "var(--accent)"];
+const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
+const cd = { data: null, loading: null, date: null, game: 0, away: 0, home: 1 };
+function ensureWorkload() {
+  if (!cd.loading) cd.loading = fetch("workload.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((w) => { cd.data = w; setupCondition(); return w; });
+  return cd.loading;
+}
+function setupCondition() {
+  const w = cd.data, last = w.meta.last_game_day;
+  const dates = Object.keys(w.days).sort().reverse();
+  const label = (d) => {
+    const dt = new Date(d + "T00:00:00"), g = w.days[d].games.length;
+    return `${d.slice(5).replace("-", ".")} (${WEEK[dt.getDay()]}) · ${d > last ? "다음 경기 예측" : g ? `${g}경기` : "경기 없음"}`;
+  };
+  $("cd-date").innerHTML = dates.map((d) => `<option value="${d}">${esc(label(d))}</option>`).join("");
+  const teamOpts = w.teams.map((t, i) => `<option value="${i}">${esc(t)}</option>`).join("");
+  $("cd-away").innerHTML = teamOpts; $("cd-home").innerHTML = teamOpts;
+  // 다음 경기 예측의 기본 맞대결은 마지막 경기 두 팀
+  const lg = w.days[last].games[w.days[last].games.length - 1];
+  if (lg) { cd.away = lg[1]; cd.home = lg[2]; }
+  cd.date = dates[0];
+  $("cd-date").addEventListener("change", (e) => { cd.date = e.target.value; cd.game = 0; renderCondition(); });
+  $("cd-games").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-g]"); if (!b) return;
+    cd.game = +b.dataset.g; renderCondition();
+  });
+  $("cd-away").addEventListener("change", (e) => { cd.away = +e.target.value; renderCondition(); });
+  $("cd-home").addEventListener("change", (e) => { cd.home = +e.target.value; renderCondition(); });
+  $("cd-match").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pname]"); if (!b) return;
+    const i = D.pitchers.findIndex((p) => p[0] === b.dataset.pname && D.teams[p[1]] === b.dataset.pteam);
+    if (i < 0) return;
+    state.pitcher = String(i); $("p-search").value = D.pitchers[i][0]; update(true); showTab("overview");
+    panelOf("overview").scrollIntoView({ behavior: REDUCED ? "auto" : "smooth", block: "start" });
+  });
+  const ev = w.meta.eval, r = w.meta.rules;
+  $("cd-method").innerHTML = `부상 기록은 공개된 데이터가 없어서, 실제로 일어난 두 가지로 배웁니다.
+    <b>불펜 피로도</b>는 그날 엔트리에 있던 구원 투수가 실제로 나왔는지(코칭스태프의 판단)를 연투·전날 투구 수·최근 7일 부하로 예측하는 모델에서,
+    같은 투수가 푹 쉬었을 때보다 등판 확률이 얼마나 줄었는지입니다. 가용도 ${r.ratio_rest * 100}% 미만은 <b>휴식 권장</b>, ${r.ratio_caution * 100}% 미만은 <b>주의</b>.
+    <b>선발</b>은 마지막 선발 후 3일 이내 휴식 권장, 4일 주의입니다.
+    <b>부상 의심 신호</b>는 직전 등판의 주 직구가 최근 8경기 평균보다 ${-r.velo_drop}km/h 이상 느렸고 다음 3경기 안 엔트리 말소 위험이 평소(${(w.meta.drop_base * 100).toFixed(1)}%)의 ${r.risk_lift}배 이상일 때 붙습니다.
+    말소에는 부진에 따른 2군행도 섞여 있고, 판정 경계는 모델 숫자에 붙인 기준일 뿐 의학적 판단이 아닙니다. 데이터는 ${last}까지입니다.`;
+  const v3 = ev.drop.by_velo["-3 이하"];
+  $("cd-eval").innerHTML =
+    `<div><b>${(ev.starter.acc * 100).toFixed(0)}%</b>예상 선발 1순위 적중 (2순위 안 ${(ev.starter.top2 * 100).toFixed(0)}%) · ${ev.starter.n}경기 검증</div>` +
+    `<div><b>${ev.usage.auc.toFixed(3)}</b>불펜 등판 예측 AUC (평소 등판 비율만 쓴 기준 ${ev.usage.auc_base.toFixed(3)}) · 경기 상황은 모르는 상태라 높지 않습니다</div>` +
+    `<div><b>${(v3[0] * 100).toFixed(0)}% vs ${(ev.drop.by_velo["-1 초과"][0] * 100).toFixed(0)}%</b>직전 구속 3km/h 이상 저하 뒤 3경기 안 말소 비율 (저하 없음과 비교, ${v3[1]}건)</div>`;
+}
+function renderCondition() {
+  if (!$("cond-root") || $("condition").hidden) return;
+  if (!cd.data) { ensureWorkload().then(renderCondition).catch((err) => {
+    $("cd-match").innerHTML = `<section class="panel"><div class="empty-state">workload.json을 불러오지 못했습니다 (${esc(err.message)})</div></section>`; }); return; }
+  const w = cd.data, dayData = w.days[cd.date], games = dayData.games;
+  $("cd-date").value = cd.date;
+  const custom = cd.game >= games.length;
+  $("cd-games").innerHTML = games.map((g, k) => `<button type="button" class="cd-game" data-g="${k}" aria-pressed="${k === cd.game}">
+      <b>${esc(w.teams[g[1]])} vs ${esc(w.teams[g[2]])}</b><small>${g[3] === "kbo_r" ? "정규시즌" : "포스트시즌"}${g[6] ? " · 예고 선발 반영" : ""}</small></button>`).join("") +
+    `<button type="button" class="cd-game" data-g="${games.length}" aria-pressed="${custom}"><b>직접 고르기</b><small>${games.length ? "다른 두 팀" : "이날 일정 없음 · 팀 선택"}</small></button>`;
+  $("cd-custom").hidden = !custom;
+  let away, home, actual = [null, null], announced = false;
+  if (custom) { $("cd-away").value = String(cd.away); $("cd-home").value = String(cd.home); away = cd.away; home = cd.home; }
+  else { const g = games[cd.game]; away = g[1]; home = g[2]; actual = [g[4], g[5]]; announced = !!g[6]; }
+  $("cd-match").innerHTML = [[away, "원정", actual[0]], [home, "홈", actual[1]]].map(([t, side, act]) => teamCondition(t, side, act, announced)).join("");
+}
+function teamCondition(t, side, actualStarter, announced) {
+  const w = cd.data, team = w.days[cd.date].teams[t], P = w.pitchers;
+  if (!team) return `<section class="panel"><div class="empty-state">${esc(w.teams[t])}: 이날 이전 기록이 없습니다.</div></section>`;
+  const name = (p) => P[p][0];
+  const nameBtn = (p) => `<button type="button" class="cd-name" data-pname="${esc(P[p][0])}" data-pteam="${esc(w.teams[P[p][1]])}">${esc(P[p][0])}<small>${P[p][2] === "L" ? "좌" : P[p][2] === "R" ? "우" : ""}</small></button>`;
+  const rot = team.rotation;
+  let sp = "";
+  if (rot.length) {
+    const [p, r, since] = rot[0];
+    sp = `<div class="lead"><span class="cd-note">예상 선발</span><b>${esc(name(p))}</b><span class="cd-note">마지막 선발 후 ${since}일 · 이 간격의 실제 선발 비율 ${r}%</span></div>` +
+      (rot.length > 1 ? `<div class="cd-note">다음 후보: ${rot.slice(1).map(([q, rr, s]) => `${esc(name(q))} (${s}일, ${rr}%)`).join(" · ")}</div>` : "");
+  } else sp = `<div class="cd-note">최근 21일 선발 기록이 없어 예상 선발을 내지 못했습니다.</div>`;
+  if (actualStarter != null) {
+    const ok = rot.length && rot[0][0] === actualStarter;
+    sp += announced ? `<div>네이버 예고 선발: <b>${esc(name(actualStarter))}</b></div>`
+      : `<div>실제 선발: <b>${esc(name(actualStarter))}</b> <span class="${ok ? "hit" : "miss"}">${ok ? "적중" : rot.some((x) => x[0] === actualStarter) ? "후보 안" : "빗나감"}</span></div>`;
+  }
+  const rows = team.players;
+  const counts = [0, 0, 0]; for (const r of rows) if (!r[3]) counts[r[1]]++;
+  const row = (r) => {
+    const [p, v, fat, , ratio, risk, streak, rest, since, y, dv, p7, reasons] = r;
+    const cells = y.slice().reverse().map((n, k) => `<span class="${n ? "on" : ""}" style="${n ? `background:color-mix(in srgb, var(--accent) ${Math.min(100, 25 + n)}%, var(--muted))` : ""}" title="${5 - k}일 전 ${n}구">${n || ""}</span>`).join("");
+    const notes = [];
+    if (reasons) notes.push(reasons.split("·").map((x) => x.startsWith("직전 구속") ? `<b>부상 의심: ${esc(x)}</b>` : esc(x)).join(" · "));
+    else if (dv != null && dv <= -10) notes.push(`직전 구속 ${(dv / 10).toFixed(1)}km/h`);
+    if (risk != null && risk >= 2000 * w.meta.drop_base) notes.push(`말소 위험 ${(risk / 10).toFixed(0)}%`);
+    if (rest != null && rest >= 10 && !notes.length) notes.push(`${rest}일째 미등판`);
+    return `<tr><td>${nameBtn(p)}</td><td><span class="vpill v${v}">${w.meta.verdicts[v]}</span></td>
+      <td class="c-fb"><div class="fbar" role="img" aria-label="피로도 ${fat}"><i style="width:${fat}%;background:${VCOL[v]}"></i></div><span class="ftxt">${fat}</span></td>
+      <td class="c-last5"><div class="last5">${cells}</div></td><td class="cd-note">${notes.join(" · ")}</td></tr>`;
+  };
+  const starters = rows.filter((r) => r[3]), pen = rows.filter((r) => !r[3]);
+  return `<section class="panel cd-team" aria-label="${esc(w.teams[t])}">
+    <h2>${esc(w.teams[t])} <small>${side} · ${team.actual ? "그날 엔트리" : "가장 최근 엔트리 기준"}</small></h2>
+    <div class="cd-sp">${sp}</div>
+    <div class="cd-sum"><span class="cd-note" style="align-self:center">불펜</span>${counts.map((n, k) => `<span class="vpill v${k}">${w.meta.verdicts[k]} ${n}</span>`).join("")}</div>
+    <div class="tablewrap"><table class="cd-table"><thead><tr><th>투수</th><th>판정</th><th class="c-fb">피로도</th><th class="c-last5">최근 5일 투구 수</th><th>메모</th></tr></thead><tbody>
+      ${pen.length ? `<tr class="sec"><td colspan="5">불펜 ${pen.length}명</td></tr>${pen.map(row).join("")}` : ""}
+      ${starters.length ? `<tr class="sec"><td colspan="5">선발 ${starters.length}명</td></tr>${starters.map(row).join("")}` : ""}
+    </tbody></table></div>
+    <div class="cd-legend"><span>최근 5일: 왼쪽이 5일 전, 오른쪽이 전날</span><span>피로도 0 = 푹 쉰 상태</span></div>
+  </section>`;
+}
+
 /* ---------- 탭 ---------- */
-const TABS = ["overview", "predict", "sim", "play", "trajectory", "tunnel", "counts"];
+const TABS = ["overview", "predict", "sim", "play", "condition", "trajectory", "tunnel", "counts"];
 let currentTab = "overview", trajAutoPlayed = false;
 function panelOf(tab) { return $(tab === "counts" ? "counts-tab" : tab); }
 function moveInk() {
@@ -2555,6 +2734,7 @@ function showTab(tab, focus) {
   if (tab === "predict") renderPredict();
   if (tab === "sim") renderSim();
   if (tab === "play") renderGame();
+  if (tab === "condition") renderCondition();
   try { history.replaceState(null, "", "#" + tab); } catch (_) { /* 미리보기 등에서는 무시 */ }
   // 궤적 탭에 처음 들어오면 한 번 재생해서 무엇을 하는 화면인지 보여준다.
   if (tab === "trajectory" && !trajAutoPlayed && !REDUCED) {
