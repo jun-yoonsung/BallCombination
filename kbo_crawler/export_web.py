@@ -11,6 +11,7 @@
 - r은 타석 결과 인덱스*2 + 결정구 여부(1). 결과가 없는 타석은 null.
 - 카운트, 아웃, 주자, 타석, 결과, 포스트시즌 여부는 비트로 묶어 한 정수(s)에 담는다.
 - mx, mz는 무브먼트(cm, 포수 시점 수평 +가 1루 쪽 / 중력 제외 수직).
+- lineups는 팀 인덱스별 예상 선발 타순 {games, order: 1~9번 타자 인덱스} (expected_lineups).
 - 투수의 투구 손(R/L)은 측정 시작 지점의 좌우 위치(x0) 중앙값 부호로 판단한다.
 - pv는 같은 타석의 직전 구종(첫 공이면 null), zn은 코스(predict.zone_of, 0~12),
   rv는 투구 가치(타자 기준 득점 x1000). model에는 예측 상수, 타자별 구종 보정, 검증 성능이 들어간다.
@@ -32,6 +33,7 @@ from .physics import from_row, movement
 
 ZONE_TOP, ZONE_BOT = 3.33, 1.61
 TRAJ_KEYS = ("x0", "z0", "vx0", "vy0", "vz0", "ax", "ay", "az", "y0")  # 1/100 단위 정수로 저장
+LINEUP_GAMES = 20  # 예상 라인업은 팀의 최근 20경기 선발 타순으로 정한다
 RESULTS = ["B", "T", "S", "F", "H", "W", "V"]
 PA_RESULTS = ["삼진", "볼넷", "고의4구", "사구", "1루타", "2루타", "3루타", "홈런", "땅볼", "플라이",
               "라인드라이브", "병살타", "희생번트", "희생플라이", "실책출루", "야수선택", "번트아웃", "기타"]
@@ -49,6 +51,35 @@ def _int(v, default=0):
         return int(float(v))
     except (TypeError, ValueError):
         return default
+
+
+def expected_lineups(rows, recent=LINEUP_GAMES):
+    """팀별 예상 선발 라인업(1~9번 타자 id)과 근거가 된 경기 수.
+
+    경기·공격 반(half)마다 처음 타석에 선 서로 다른 타자 9명을 그 경기 선발 1~9번으로 본다.
+    팀의 최근 경기들에서 (타자, 타순) 선발 횟수를 세고, 많은 쌍부터 겹치지 않게 채운다.
+    """
+    games = {}  # (팀, 경기) -> (날짜, [타자 id 순서])
+    for r in rows:
+        team = r["away_team"] if r["half"] == "top" else r["home_team"]
+        date, order = games.setdefault((team, r["game_id"]), (r["game_date"], []))
+        if len(order) < 9 and r["batter_id"] not in order:
+            order.append(r["batter_id"])
+    by_team = {}
+    for (team, gid), (date, order) in games.items():
+        if len(order) == 9:
+            by_team.setdefault(team, []).append((date, gid, order))
+    lineups = {}
+    for team, gs in by_team.items():
+        gs = sorted(gs)[-recent:]
+        starts = Counter((b, slot) for _, _, order in gs for slot, b in enumerate(order))
+        lineup, used = [None] * 9, set()
+        for (b, slot), _ in sorted(starts.items(), key=lambda kv: -kv[1]):
+            if lineup[slot] is None and b not in used:
+                lineup[slot] = b
+                used.add(b)
+        lineups[team] = (lineup, len(gs))
+    return lineups
 
 
 class Index:
@@ -145,6 +176,9 @@ def build(paths):
         for k in TRAJ_KEYS:
             t[k].append(round(params[k] * 100))
 
+    lineups = {teams.pos[team]: {"games": n, "order": [batters.pos[b] for b in lineup]}
+               for team, (lineup, n) in expected_lineups(rows).items()}
+
     data = {
         "meta": {
             "generated": datetime.now().isoformat(timespec="minutes"),
@@ -160,6 +194,7 @@ def build(paths):
         "dates": dates.items,
         "pitchers": [[*pitcher_info[i], hands.get(i)] for i in range(len(pitchers.items))],
         "batters": [list(batter_info[i]) for i in range(len(batters.items))],
+        "lineups": [lineups.get(i) for i in range(len(teams.items))],
         "cols": cols,
         "model": {
             "type_alphas": predict.TYPE_ALPHAS,

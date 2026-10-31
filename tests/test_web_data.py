@@ -35,5 +35,17 @@ class WebTrajectoryTest(unittest.TestCase):
         self.assertEqual(y0s, {50.0, 55.0})
 
 
+    def test_expected_lineups(self):
+        data = json.loads((WEB / "pitches.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(data["lineups"]), len(data["teams"]))
+        for team, lu in enumerate(data["lineups"]):
+            order = lu["order"]
+            self.assertEqual(len(order), 9)
+            self.assertEqual(len(set(order)), 9, data["teams"][team])
+            self.assertGreaterEqual(lu["games"], 10)
+            # 대부분은 지금 그 팀 소속(시즌 중 이적 선수만 예외)
+            self.assertGreaterEqual(sum(data["batters"][b][1] == team for b in order), 8)
+
+
 if __name__ == "__main__":
     unittest.main()

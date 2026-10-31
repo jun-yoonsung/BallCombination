@@ -308,6 +308,18 @@ tr.total td { font-weight: 700; border-top: 1px solid var(--line); background: v
 .pitchlog .no { width: 24px; height: 24px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-family: var(--font-data); font-size: 12px; font-weight: 700; }
 .pitchlog .what { min-width: 0; }
 .pitchlog .what small { display: block; color: var(--muted); font-size: 12px; }
+.lineup { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.lineup li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 10px; font-size: 13px; }
+.lineup li.now { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); font-weight: 700; }
+.lineup .slot { font-family: var(--font-data); color: var(--muted); font-weight: 700; }
+.lineup .who small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+.lineup .res { display: flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; }
+.lineup .res i { font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+.lineup .res i.good { background: var(--pt-ch); color: #fff; }
+.lineup .res i.bad { background: var(--accent); color: #fff; }
+.inning { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13px; margin-bottom: 10px; }
+.inning b { font-family: var(--font-data); }
+.diamond { width: 44px; height: 30px; }
 .pitchlog .cnt { font-family: var(--font-data); font-weight: 700; font-size: 13px; }
 .pitchlog .hint { color: var(--muted); background: none; text-align: center; display: block; padding: 24px 8px; animation: none; }
 .simres { display: grid; gap: 14px; }
@@ -814,12 +826,14 @@ function shell() {
         <div class="seg modeseg" id="g-mode" role="group" aria-label="모드">
           <button type="button" data-v="pitch" aria-pressed="true">투수로 던지기</button><button type="button" data-v="bat" aria-pressed="false">타자로 치기</button>
         </div>
-        <div class="field"><label for="g-batter" id="g-batter-l">상대 타자</label><select id="g-batter"></select></div>
-        <div class="field"><span class="flabel" id="l-g-stance">타석</span>
+        <div class="field" id="g-opp-f"><label for="g-opp">상대</label><select id="g-opp"></select></div>
+        <div class="field" id="g-batter-f"><label for="g-batter" id="g-batter-l">상대 타자</label><select id="g-batter"></select></div>
+        <div class="field" id="g-stance-f"><span class="flabel" id="l-g-stance">타석</span>
           <div class="seg" id="g-stance" role="group" aria-labelledby="l-g-stance"><button type="button" data-v="0" aria-pressed="true">우타</button><button type="button" data-v="1" aria-pressed="false">좌타</button></div></div>
         <div class="field" id="g-speed-f" hidden><span class="flabel" id="l-g-speed">공 속도</span>
           <div class="seg" id="g-speed" role="group" aria-labelledby="l-g-speed"><button type="button" data-v="3" aria-pressed="false">1/3</button><button type="button" data-v="2" aria-pressed="true">1/2</button><button type="button" data-v="1" aria-pressed="false">실제</button></div></div>
         <button type="button" class="playbtn" id="g-new" style="padding:9px 16px">새 타석</button>
+        <button type="button" class="chip" id="g-reset" hidden>1회부터 다시</button>
       </div>
     </section>
     <div class="game">
@@ -852,6 +866,12 @@ function shell() {
           <button type="button" class="playbtn" id="g-go" style="margin-top:12px;width:100%;justify-content:center;padding:10px">다음 공</button>
           <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px"><input type="checkbox" id="g-peek"> 투구 예측 미리 보기 (힌트)</label>
           <div class="ghint" id="g-pred" style="margin-top:6px"></div>
+        </section>
+        <section class="panel" id="g-lineuppanel" aria-labelledby="h-glu" hidden>
+          <h2 id="h-glu"></h2>
+          <div class="inning" id="g-inning" aria-live="polite"></div>
+          <ol class="lineup" id="g-lineup"></ol>
+          <p class="sub" id="g-lu-note" style="margin:8px 0 0;font-size:12px"></p>
         </section>
         <section class="panel" aria-labelledby="h-glog">
           <h2 id="h-glog">이번 타석</h2>
@@ -2170,7 +2190,7 @@ function renderBatch(sb, sa, real, h2h, base, ms) {
 }
 
 /* ---------- 직접 해보기 ---------- */
-const gm = { mode: "pitch", pitcher: null, batter: -1, stance: 0, slow: 2, b: 0, s: 0, n: 0, prev: -1, over: true,
+const gm = { mode: "pitch", pitcher: null, opp: -1, lu: null, batter: -1, stance: 0, slow: 2, b: 0, s: 0, n: 0, prev: -1, over: true,
   type: -1, aim: null, pitches: [], cur: null, peek: false, rng: BallSim.mulberry32((Math.random() * 2 ** 32) >>> 0),
   rec: { pitch: { pa: 0, k: 0, bb: 0, h: 0, e: 0, out: 0 }, bat: { pa: 0, k: 0, bb: 0, h: 0, e: 0, out: 0, hr: 0 } } };
 let gCtx, gW = 0, gH = 0, gRaf = 0, gPointer = null;
@@ -2180,11 +2200,13 @@ const FX = (sx) => (sx - 100) / 50 * 0.83, FZ = (sy) => 3.33 - (sy - 50) / 100 *
 
 function setupGame() {
   setupCanvas("gbox", "gcv", (ctx, w, h) => { gCtx = ctx; gW = w; gH = h; drawGame(gm.cur ? gm.cur.t : null); });
-  $("g-mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b.dataset.v !== gm.mode) { gm.mode = b.dataset.v; newGamePA(); } });
+  $("g-mode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b && b.dataset.v !== gm.mode) { gm.mode = b.dataset.v; if (lineupMode()) setLineupBatter(); newGamePA(); } });
+  $("g-opp").addEventListener("change", (e) => { gm.opp = +e.target.value; startLineup(); });
+  $("g-reset").addEventListener("click", startLineup);
   $("g-batter").addEventListener("change", (e) => { gm.batter = +e.target.value; if (gm.batter >= 0) gm.stance = batterStance(gm.batter, gm.pitcher); newGamePA(); });
   $("g-stance").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { gm.stance = +b.dataset.v; newGamePA(); } });
   $("g-speed").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { gm.slow = +b.dataset.v; syncGame(); } });
-  $("g-new").addEventListener("click", newGamePA);
+  $("g-new").addEventListener("click", () => { if (lineupMode() && gm.over && gm.lu.done) nextBatter(); else newGamePA(); });
   $("g-types").addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) { gm.type = +b.dataset.t; syncGame(); drawTarget(); } });
   $("g-target").addEventListener("click", (e) => {
     if (gm.mode !== "pitch" || gm.over || gm.cur || gm.type < 0) return;
@@ -2216,7 +2238,12 @@ function renderGame() {
   if (gm.pitcher === pitcher) { if (!gRaf) drawGame(); return; }
   gm.pitcher = pitcher; gm.batter = -1; gm.stance = D.pitchers[pitcher][2] === "L" ? 0 : 1;
   $("g-batter").innerHTML = batterOptions(pitcher, "리그 평균 타자");
-  newGamePA();
+  const own = D.pitchers[pitcher][1];
+  $("g-opp").innerHTML = `<option value="-1">타자 한 명 고르기</option><optgroup label="팀 예상 라인업">` +
+    D.teams.map((t, i) => [t, i]).filter(([, i]) => i !== own && D.lineups && D.lineups[i]).map(([t, i]) => `<option value="${i}">${esc(t)} 타선</option>`).join("") + "</optgroup>";
+  if (gm.opp === own || !(D.lineups && D.lineups[gm.opp])) gm.opp = -1;
+  $("g-opp").value = String(gm.opp);
+  startLineup();
 }
 function syncGame() {
   const pitchMode = gm.mode === "pitch";
@@ -2224,11 +2251,18 @@ function syncGame() {
   $("g-pitchpanel").hidden = !pitchMode; $("g-batpanel").hidden = pitchMode; $("g-speed-f").hidden = pitchMode;
   $("gbox").classList.toggle("batting", !pitchMode);
   $("g-batter").value = String(gm.batter);
+  const lm = lineupMode();
+  $("g-opp-f").hidden = !pitchMode; $("g-batter-f").hidden = lm; $("g-stance-f").hidden = lm;
+  $("g-reset").hidden = !lm; $("g-lineuppanel").hidden = !lm;
+  $("g-new").textContent = lm ? (gm.over && gm.lu.done ? (gm.lu.outs === 3 ? `${gm.lu.inning + 1}회 시작` : "다음 타자") : "이 타자 다시") : "새 타석";
+  if (lm) renderLineup();
   const pi = D.pitchers[gm.pitcher], bat = gm.batter >= 0 ? D.batters[gm.batter][0] : "리그 평균 타자";
   $("g-sub").innerHTML = pitchMode
-    ? `<b style="color:var(--ink)">${esc(pi[0])}</b>이 되어 ${esc(bat)}을(를) 상대합니다. 구종을 고르고 노릴 곳을 누르세요. 타자 반응은 실제 기록으로 만든 모델이 정합니다.`
+    ? (lm ? `<b style="color:var(--ink)">${esc(pi[0])}</b>이 되어 ${esc(D.teams[gm.opp])}의 예상 라인업을 1번부터 상대합니다. 아웃·주자·실점이 이어지고, 타자마다 그 타자의 실제 기록으로 반응합니다.`
+      : `<b style="color:var(--ink)">${esc(pi[0])}</b>이 되어 ${esc(bat)}을(를) 상대합니다. 구종을 고르고 노릴 곳을 누르세요. 타자 반응은 실제 기록으로 만든 모델이 정합니다.`)
     : `${esc(bat)}이(가) 되어 <b style="color:var(--ink)">${esc(pi[0])}</b>의 공을 칩니다. 투수는 이 투수의 실제 볼배합대로 던지고, 공은 실제 궤적대로 날아옵니다.`;
-  $("g-matchup").innerHTML = `${esc(pi[0])}<span>vs</span>${esc(bat)} <span style="font-size:13px">(${gm.stance ? "좌타" : "우타"})</span>`;
+  $("g-matchup").innerHTML = `${esc(pi[0])}<span>vs</span>${lm ? `<span style="margin:0 4px 0 0;color:var(--muted)">${gm.lu.idx % 9 + 1}번</span>` : ""}${esc(bat)} <span style="font-size:13px">(${gm.stance ? "좌타" : "우타"})</span>` +
+    (lm ? `<span style="font-size:13px">${gm.lu.inning}회 ${gm.lu.outs}아웃${gm.lu.bases.some(Boolean) ? " · 주자 " + ["1", "2", "3"].filter((_, k) => gm.lu.bases[k]).join("·") + "루" : ""} · ${gm.lu.runs}실점</span>` : "");
   document.querySelectorAll("#g-lamps .b i").forEach((el, k) => el.classList.toggle("on", k < Math.min(gm.b, 3)));
   document.querySelectorAll("#g-lamps .s i").forEach((el, k) => el.classList.toggle("on", k < Math.min(gm.s, 2)));
   $("g-pc").textContent = `${gm.n}구`;
@@ -2264,7 +2298,7 @@ function drawTarget() {
   if (gm.mode !== "pitch" || gm.pitcher == null || !SIM) return;
   if (gm.over) {  // 타석이 끝나면 카운트가 3스트라이크·4볼이라 힌트를 계산하지 않는다
     $("g-target").style.opacity = 0.35;
-    $("g-real").innerHTML = `<div>타석이 끝났습니다. <b>새 타석</b>을 누르면 다시 시작합니다.</div>`;
+    $("g-real").innerHTML = `<div>타석이 끝났습니다. <b>${esc($("g-new").textContent)}</b>을(를) 누르면 이어집니다.</div>`;
     return;
   }
   $("g-target").style.opacity = "";
@@ -2384,9 +2418,70 @@ function endGamePA(result) {
   const pitcherWins = !hit && !on && result !== "실책";
   const youWin = gm.mode === "pitch" ? pitcherWins : !pitcherWins;
   const el = $("g-banner");
-  el.textContent = (["땅볼", "플라이", "직선타"].includes(result) ? result + " 아웃" : result === "실책" ? "실책 출루" : result) + (youWin ? " · 승리" : " · 패배");
+  const extra = lineupMode() ? lineupResult(result) : "";
+  el.textContent = (["땅볼", "플라이", "직선타"].includes(result) ? result + " 아웃" : result === "실책" ? "실책 출루" : result) + (extra || (youWin ? " · 승리" : " · 패배"));
   el.style.background = youWin ? "var(--pt-ch)" : "var(--accent)";
   el.hidden = false; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+}
+
+/* 팀 라인업 상대: 예상 타순대로 이어 던지고 아웃·주자·실점을 센다 */
+function lineupMode() { return gm.mode === "pitch" && gm.opp >= 0 && !!gm.lu; }
+function startLineup() {
+  gm.lu = gm.opp >= 0 && D.lineups && D.lineups[gm.opp]
+    ? { order: D.lineups[gm.opp].order, idx: 0, inning: 1, outs: 0, bases: [0, 0, 0], runs: 0, inningRuns: 0, pa: [], done: false } : null;
+  if (gm.lu) setLineupBatter();
+  else if (gm.pitcher != null) { gm.batter = +$("g-batter").value; if (gm.batter >= 0) gm.stance = batterStance(gm.batter, gm.pitcher); }
+  newGamePA();
+}
+function setLineupBatter() {
+  gm.batter = gm.lu.order[gm.lu.idx % 9];
+  gm.stance = batterStance(gm.batter, gm.pitcher);
+  gm.lu.done = false;
+}
+function nextBatter() {
+  const lu = gm.lu;
+  if (lu.outs === 3) Object.assign(lu, { inning: lu.inning + 1, outs: 0, bases: [0, 0, 0], inningRuns: 0 });
+  lu.idx++;
+  setLineupBatter();
+  newGamePA();
+}
+// 단순 진루 규칙: 범타·삼진은 주자 그대로, 볼넷은 밀어내기, 단타는 2·3루 주자 득점, 2루타는 1루 주자 3루까지, 실책은 모두 한 베이스
+function advanceRunners(bases, result) {
+  const [b1, b2, b3] = bases;
+  switch (result) {
+    case "볼넷": case "사구": return { bases: [1, b1 || b2, (b1 && b2) || b3], runs: b1 && b2 && b3 ? 1 : 0 };
+    case "1루타": return { bases: [1, b1, 0], runs: b2 + b3 };
+    case "실책": return { bases: [1, b1, b2], runs: b3 };
+    case "2루타": return { bases: [0, 1, b1], runs: b2 + b3 };
+    case "3루타": return { bases: [0, 0, 1], runs: b1 + b2 + b3 };
+    case "홈런": return { bases: [0, 0, 0], runs: b1 + b2 + b3 + 1 };
+    default: return { bases, runs: 0, out: true };
+  }
+}
+function lineupResult(result) {
+  const lu = gm.lu, a = advanceRunners(lu.bases, result);
+  if (a.out) lu.outs++;
+  lu.bases = a.bases; lu.runs += a.runs; lu.inningRuns += a.runs;
+  lu.pa.push({ slot: lu.idx % 9, result, inning: lu.inning });
+  lu.done = true;
+  return (a.runs ? ` · ${a.runs}실점` : "") + (lu.outs === 3 ? ` · ${lu.inning}회 종료` : ` · ${lu.outs}아웃`);
+}
+const PA_SHORT = { "삼진": "K", "볼넷": "BB", "사구": "HBP", "1루타": "1B", "2루타": "2B", "3루타": "3B", "홈런": "HR", "땅볼": "GO", "플라이": "FO", "직선타": "LO", "실책": "E" };
+function renderLineup() {
+  const lu = gm.lu, now = lu.idx % 9;
+  $("h-glu").textContent = `${D.teams[gm.opp]} 예상 라인업`;
+  const base = (on, x, y) => `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" transform="rotate(45 ${x} ${y})" fill="${on ? "var(--accent)" : "none"}" stroke="var(--muted)" stroke-width="1.5"/>`;
+  $("g-inning").innerHTML = `<span><b>${lu.inning}</b>회</span><span><b>${lu.outs}</b>아웃</span>` +
+    `<svg class="diamond" viewBox="0 0 44 30" role="img" aria-label="주자 ${["1루", "2루", "3루"].filter((_, k) => lu.bases[k]).join("·") || "없음"}">${base(lu.bases[2], 9, 20)}${base(lu.bases[1], 22, 9)}${base(lu.bases[0], 35, 20)}</svg>` +
+    `<span>실점 <b>${lu.runs}</b>${lu.inningRuns && lu.inningRuns < lu.runs ? ` <small style="color:var(--muted)">(이번 회 ${lu.inningRuns})</small>` : ""}</span>`;
+  $("g-lineup").innerHTML = lu.order.map((b, k) => {
+    const res = lu.pa.filter((p) => p.slot === k).map((p) => {
+      const good = ["삼진", "땅볼", "플라이", "직선타"].includes(p.result), bad = ["1루타", "2루타", "3루타", "홈런"].includes(p.result);
+      return `<i class="${good ? "good" : bad ? "bad" : ""}" title="${p.inning}회 ${esc(p.result)}">${PA_SHORT[p.result] || esc(p.result)}</i>`;
+    }).join("");
+    return `<li class="${k === now ? "now" : ""}"${k === now ? ' aria-current="true"' : ""}><span class="slot">${k + 1}</span><span class="who">${esc(D.batters[b][0])}<small>${batterStance(b, gm.pitcher) ? "좌" : "우"}</small></span><span class="res">${res}</span></li>`;
+  }).join("");
+  $("g-lu-note").textContent = `최근 ${D.lineups[gm.opp].games}경기 선발 타순에서 가장 자주 나온 조합입니다. 진루는 단순 규칙(단타 때 2루 주자 득점 등)을 따릅니다.`;
 }
 
 function drawGame(tNow) {
